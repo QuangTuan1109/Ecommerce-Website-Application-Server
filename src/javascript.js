@@ -3,6 +3,9 @@ require('dotenv').config();
 const app = express();
 const morgan = require('morgan');
 
+require('./config/db/connect').mongoURI;
+
+
 // Middlewares
 app.use(morgan('dev'));
 
