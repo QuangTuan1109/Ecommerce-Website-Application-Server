@@ -5,6 +5,9 @@ const morgan = require('morgan');
 
 require('./config/db/connect').mongoURI;
 
+const user = require('./route/User/user.Route')
+const login = require('./route/User/login.Route')
+
 
 // Middlewares
 app.use(morgan('dev'));
@@ -25,6 +28,9 @@ app.get('/', (req, res, next) => {
         message: 'Server is OK!'
     })
   })
+
+app.use('/api/v1/user', user)
+app.use('/api/v1', login)
 
 // Catch 404 Errors and forward them to error handler
 app.use((req, res, next) => {

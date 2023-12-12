@@ -5,4 +5,6 @@ const db = {};
 
 db.mongoose = mongoose;
 
+db.ROLES = ["admin", "customer", "seller"];
+
 module.exports = db;
