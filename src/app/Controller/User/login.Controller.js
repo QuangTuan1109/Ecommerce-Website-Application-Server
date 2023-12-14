@@ -99,6 +99,12 @@ async function SignIn(req, res, next) {
 async function SignUpSeller(req, res, next) {
     const {Fullname, Image, Address, Phone} = req.body
 
+    // Check phone
+    const CheckPhoneSeller = await Seller.findOne({ Phone })
+    if (CheckPhoneSeller) {
+        return res.status(403).json({ error: { message: 'Phone is registed!!' } })
+    }
+
     //Create new seller.
     const newSeller = new Seller({ Fullname, Image, Address, Phone})
 
@@ -115,28 +121,34 @@ async function SignUpSeller(req, res, next) {
             } else {
                 const token = req.header('Authorization').split(' ')
                 const verifytoken = jwt.verify(token[1], process.env.JWT_SECRET)
-                User.findOne({_id: verifytoken.sub}, (err, result) => {
-                    if (err) {
-                        res.status(500).json({
-                            message: err
-                        })
-                        return
-                    } else {
-                        if (role[0].name == 'seller' 
-                            && result.Role != role[0]._id.toString() 
-                            && result.Role.length == 1) {
-                            
-                            newSeller.save()
-    
-                            result.SellerID = newSeller._id;
-                            result.Role[1] = role[0]._id
-                            result.save()
-                            return res.status(201).json('Successfully!!')
+                try {
+                    User.findOne({_id: verifytoken.sub}, async (err, result) => {
+                        if (err) {
+                            res.status(500).json({
+                                message: err
+                            })
+                            return
                         } else {
-                            return res.status(403).json('Registed!!')
+                            if (role[0].name == 'seller' 
+                                && result.Role != role[0]._id.toString() 
+                                && result.Role.length == 1) {
+                                    newSeller.save()
+                                    await User.updateOne({_id: result._id}, 
+                                        {
+                                            $set: {
+                                                SellerID : newSeller._id,
+                                                Role : [result.Role[0], role[0]._id]
+                                            }
+                                        })
+                                return res.status(201).json('Successfully!!')
+                            } else {
+                                return res.status(403).json('Registed!!')
+                            }
                         }
-                    }
-                })
+                    })
+                } catch (error) {
+                    
+                }
             }
         })
     }

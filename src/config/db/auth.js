@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken')
 
 const User = require('../../app/Model/User/user.Model')
-const Role = require('../../app/Model/User/role.Model')
+const Roles = require('../../app/Model/User/role.Model')
 const { JWT_SECRET } = require('../index')
 
 verifyToken = (req, res, next) => {
@@ -27,9 +27,9 @@ isAdmin = (req, res, next) => {
             })
             return
         }
-        Role.find({
+        Roles.find({
             _id: {
-                $in: user.roles[0]
+                $in: user.Role[0]
             }
         }, (err, roles) => {
             if (err) {
@@ -59,9 +59,10 @@ isSeller = (req, res, next) => {
             })
             return
         }
-        Role.find({
+
+        Roles.find({
             _id: {
-                $in: user.roles[0]
+                $in: user.Role[1]
             }
         }, (err, roles) => {
             if (err) {

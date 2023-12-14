@@ -7,6 +7,7 @@ require('./config/db/connect').mongoURI;
 
 const user = require('./route/User/user.Route')
 const login = require('./route/User/login.Route')
+const product = require('./route/Product/product.Route')
 
 
 // Middlewares
@@ -31,6 +32,7 @@ app.get('/', (req, res, next) => {
 
 app.use('/api/v1/user', user)
 app.use('/api/v1', login)
+app.use('/api/v1/products', product)
 
 // Catch 404 Errors and forward them to error handler
 app.use((req, res, next) => {

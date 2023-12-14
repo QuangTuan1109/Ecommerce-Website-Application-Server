@@ -7,7 +7,7 @@ const Login = require('../../app/Controller/User/login.Controller')
 
 router.route('/signup').post(Login.SignUp);
 
-router.route('/signup-seller').post(passport.authenticate('jwt', {session: false}), Login.SignUpSeller);
+router.route('/signup-seller').patch(passport.authenticate('jwt', {session: false}), Login.SignUpSeller);
 
 router.route('/signin').post(passport.authenticate('local', {session: false}), Login.SignIn);
 
