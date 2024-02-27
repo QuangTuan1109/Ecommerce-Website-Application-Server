@@ -3,53 +3,79 @@ const Schema = mongoose.Schema
 
 const productModel = new Schema({
     SellerID: {
-        type: Schema.Types.String,
-        ref: 'sellerModel'
+        type: Schema.Types.ObjectId,
+        ref: 'sellerModel',
+        required: true
     },
     Name: {
-        type: String
+        type: String,
+        minlength: 10,
+        maxlength: 120,
+        required: true
     },
-    Price: {
-        type:  Number
-    },
-    Descriptions: {
-        type: String
+    Description: {
+        type: String,
+        maxlength: 3000
     },
     Image: {
-        type: Array
+        type: [String]
+    },
+    Video: {
+        type: String
     },
     Category: {
         type: String
     },
+    Detail: {
+        type: Schema.Types.Mixed
+    },
+    Classify: {
+        type: [{ type: Schema.Types.ObjectId, ref: 'classifyDetailModel' }]
+    },
     Rating: {
-        type: Number
+        type: Number,
+        default: 0
     },
-    Size: {
-        type: Array
+    Discount: {
+        type: [{ type: Schema.Types.ObjectId, ref: 'DiscountModel' }]
     },
-    Color: {
-        type: Array
+    SizeTable: {
+        type: Schema.Types.ObjectId,
+        ref: 'sizeTableModel'
     },
     Like: {
-        type: Number
+        type: Number,
+        default: 0
     },
-    Quantity: {
-        type: Number
+    Weight: Number,
+    Heigh: Number,
+    Length: Number,
+    hazardousGoods: {
+        type: String,
+        enum: ['Yes', 'No']
     },
-    Detail: {
-        type: String
+    deliveryFee: {
+        type: [{ type: Schema.Types.ObjectId, ref: 'deliveryModel' }]
     },
-    Type: {
-        type: String
+    preOrderGoods: {
+        type: String,
+        enum: ['Yes', 'No']
     },
     Status: {
+        type: String,
+        enum: ['New', 'Old'],
+        default: 'New'
+    },
+    SKU: {
         type: String
     },
     CreateAt: {
-        type: Date
+        type: Date,
+        default: Date.now
     },
     UpdateAt: {
-        type: Date
+        type: Date,
+        default: Date.now
     },
 })
 

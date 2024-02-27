@@ -1,20 +1,23 @@
-const mongoose = require('mongoose')
-const Schema = mongoose.Schema
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
 const categoriesModel = new Schema({
     ParentCategoryID: {
-        type: Schema.Types.String,
+        type: Schema.Types.ObjectId,
         ref: 'categoriesModel'
     },
     Name: {
-        type: String
+        type: String,
+        required: true
     },
     CreateAt: {
-        type: Date
+        type: Date,
+        default: Date.now
     },
     UpdateAt: {
-        type: Date
-    },
-})
+        type: Date,
+        default: Date.now
+    }
+});
 
-module.exports = mongoose.model('categoriesModel', categoriesModel)
+module.exports = mongoose.model('categoriesModel', categoriesModel);

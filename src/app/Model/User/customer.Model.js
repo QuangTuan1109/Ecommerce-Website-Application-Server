@@ -1,10 +1,11 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-const customerModel = new Schema ({
+const customerSchema = new Schema ({
     Fullname : {
         type: String,
-        maxLength: 30
+        maxlength: 30,
+        required: true
     },
     Image : {
         type: String
@@ -14,7 +15,8 @@ const customerModel = new Schema ({
     },
     Phone : {
         type: String,
-        unique: true
+        unique: true,
+        required: true
     },
     Following : {
         type: String
@@ -22,6 +24,6 @@ const customerModel = new Schema ({
     Follower : {
         type: String
     },
-})
+});
 
-module.exports = mongoose.model('customerModel', customerModel);
+module.exports = mongoose.model('Customer', customerSchema);

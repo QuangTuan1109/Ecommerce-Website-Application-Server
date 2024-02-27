@@ -1,14 +1,14 @@
-const express = require('express')
-const router = require('express-promise-router')()
-const passport = require('passport')
+const express = require('express');
+const router = express.Router();
+const passport = require('passport');
+const Login = require('../../app/Controller/User/login.Controller');
 
-require('../../config/db/passport')
-const Login = require('../../app/Controller/User/login.Controller')
+require('../../config/db/passport');
 
-router.route('/signup').post(Login.SignUp);
+router.post('/signup', Login.SignUp);
 
-router.route('/signup-seller').patch(passport.authenticate('jwt', {session: false}), Login.SignUpSeller);
+router.patch('/signup-seller', passport.authenticate('jwt', { session: false }), Login.SignUpSeller);
 
-router.route('/signin').post(passport.authenticate('local', {session: false}), Login.SignIn);
+router.post('/signin', passport.authenticate('local', { session: false }), Login.SignIn);
 
-module.exports = router
+module.exports = router;

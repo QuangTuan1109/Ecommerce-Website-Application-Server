@@ -1,60 +1,46 @@
 const express = require('express');
 require('dotenv').config();
-const app = express();
 const morgan = require('morgan');
+const userRoutes = require('./route/User/user.Route');
+const loginRoutes = require('./route/User/login.Route');
+const productRoutes = require('./route/Product/product.Route');
 
+// Connect to MongoDB database
 require('./config/db/connect').mongoURI;
 
-const user = require('./route/User/user.Route')
-const login = require('./route/User/login.Route')
-const product = require('./route/Product/product.Route')
+// Create Express app
+const app = express();
 
-
-// Middlewares
-app.use(morgan('dev'));
-
-// HTTP logger
-app.use(morgan("combined"));
-
-app.use(
-  express.urlencoded({
-    extended: true,
-  })
-);
+// Middleware
+app.use(morgan('dev')); // HTTP request logger
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // Routes
-app.get('/', (req, res, next) => {
-    return res.status(200).json({
-        message: 'Server is OK!'
-    })
-  })
+app.get('/', (req, res) => {
+    res.status(200).json({ message: 'Server is OK!' });
+});
 
-app.use('/api/v1/user', user)
-app.use('/api/v1', login)
-app.use('/api/v1/products', product)
+app.use('/api/v1/user', userRoutes);
+app.use('/api/v1', loginRoutes);
+app.use('/api/v1/products', productRoutes);
 
-// Catch 404 Errors and forward them to error handler
+// Handle 404 errors
 app.use((req, res, next) => {
-    const err = new Error("Not Found");
+    const err = new Error('Not Found');
     err.status = 404;
     next(err);
-  });
-  
-  // Error handler function
-  app.use((err, req, res, next) => {
-    const error = app.get("env") === "development" ? err : {};
-    const status = err.status || 500;
-  
-    // response to client
-    return res.status(status).json({
-      error: {
-        message: error.message,
-      },
-    });
-  });
+});
 
-const port = process.env.PORT;
+// Error handler
+app.use((err, req, res, next) => {
+    const status = err.status || 500;
+    const message = app.get('env') === 'development' ? err.message : 'Internal Server Error';
+    res.status(status).json({ error: { message } });
+});
+
+// Start server
+const port = process.env.PORT || 3000;
 app.listen(port, () => {
-    console.log(`Example app listening at http://localhost:${port}`);
-  });
+    console.log(`Server is running on port ${port}`);
+});

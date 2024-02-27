@@ -1,24 +1,23 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-
 const bcrypt = require('bcryptjs');
 
-const userModel = new Schema ({
+const userModelSchema = new Schema ({
     AdminID : {
-        type: Schema.Types.String,
+        type: Schema.Types.ObjectId,
         ref: 'adminModel'
     },
     SellerID: {
-        type: Schema.Types.String,
+        type: Schema.Types.ObjectId,
         ref: 'sellerModel'
     },
     CustomerID: {
-        type: Schema.Types.String,
+        type: Schema.Types.ObjectId,
         ref: 'customerModel'
     },
     Role : [{
-        type: Schema.Types.String,
-        ref: 'role'
+        type: Schema.Types.ObjectId,
+        ref: 'Role'
     }],
     Email : {
         type: String,
@@ -44,32 +43,32 @@ const userModel = new Schema ({
     },
     confirmPassword : {
         type: String, 
-        maxLength: 50,
+        maxlength: 50,
     }
-})
+});
 
-userModel.pre('save', async function(next){
+userModelSchema.pre('save', async function(next) {
     try {
-        if (this.AuthType !== 'local') next()
+        if (this.AuthType !== 'local') return next();
 
         //Generate a salt
-        const salt = await bcrypt.genSalt(10)
+        const salt = await bcrypt.genSalt(10);
         //Genarate a password 
-        const passwordHashed = await bcrypt.hash(this.Password, salt)
+        const passwordHashed = await bcrypt.hash(this.Password, salt);
         //Re-assign password hashed
-        this.Password = passwordHashed
-        next()
+        this.Password = passwordHashed;
+        next();
     } catch (error) {
-        next(error)
+        next(error);
     }
-})
+});
 
-userModel.methods.isValidPassword = async function(newPassword){
-    try{
-        return await bcrypt.compare(newPassword, this.Password)
-    } catch(error){
-        throw new Error(error)
+userModelSchema.methods.isValidPassword = async function(newPassword) {
+    try {
+        return await bcrypt.compare(newPassword, this.Password);
+    } catch (error) {
+        throw new Error(error);
     }
-}
+};
 
-module.exports = mongoose.model('userModel', userModel);
+module.exports = mongoose.model('User', userModelSchema);
