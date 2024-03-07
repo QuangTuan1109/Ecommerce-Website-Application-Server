@@ -2,18 +2,24 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const DiscountModel = new Schema({
-    From: {
-        type: Number,
-        required: true
+    ProductID: {
+        type: Schema.Types.ObjectId,
+        ref: 'productModel'
     },
-    To: {
-        type: Number,
-        required: true
-    },
-    UnitPrice: {
-        type: Number,
-        required: true
-    },
+    Value: [{
+        From: {
+            type: Number,
+            required: true
+        },
+        To: {
+            type: Number,
+            required: true
+        },
+        UnitPrice: {
+            type: Number,
+            required: true
+        },
+    }],
     CreateAt: {
         type: Date,
         default: Date.now

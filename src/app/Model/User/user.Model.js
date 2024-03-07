@@ -19,6 +19,10 @@ const userModelSchema = new Schema ({
         type: Schema.Types.ObjectId,
         ref: 'Role'
     }],
+    activeRole: {
+        type: Schema.Types.ObjectId,
+        ref: 'Role'
+    },
     Email : {
         type: String,
         required: true,
@@ -47,21 +51,14 @@ const userModelSchema = new Schema ({
     }
 });
 
-userModelSchema.pre('save', async function(next) {
-    try {
-        if (this.AuthType !== 'local') return next();
 
-        //Generate a salt
-        const salt = await bcrypt.genSalt(10);
-        //Genarate a password 
-        const passwordHashed = await bcrypt.hash(this.Password, salt);
-        //Re-assign password hashed
-        this.Password = passwordHashed;
-        next();
-    } catch (error) {
-        next(error);
+userModelSchema.pre('save', function(next) {
+    if (this.Role.length === 1) {
+        this.activeRole = this.Role[0];
     }
-});
+    next();
+}); 
+
 
 userModelSchema.methods.isValidPassword = async function(newPassword) {
     try {
@@ -70,5 +67,4 @@ userModelSchema.methods.isValidPassword = async function(newPassword) {
         throw new Error(error);
     }
 };
-
 module.exports = mongoose.model('User', userModelSchema);

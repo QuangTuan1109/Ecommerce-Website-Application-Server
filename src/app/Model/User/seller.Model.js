@@ -18,12 +18,22 @@ const sellerSchema = new Schema ({
         unique: true,
         required: true
     },
-    Following : {
-        type: String
-    },
-    Follower : {
-        type: String
-    },
+    Following : [{
+        type: Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    Follower : [{
+        type: Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    Vouchers: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Voucher'
+    }],
+    created_at: {
+        type: Date,
+        default: Date.now
+    }
 });
 
 module.exports = mongoose.model('Seller', sellerSchema);

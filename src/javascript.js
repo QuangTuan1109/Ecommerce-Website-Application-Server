@@ -4,6 +4,8 @@ const morgan = require('morgan');
 const userRoutes = require('./route/User/user.Route');
 const loginRoutes = require('./route/User/login.Route');
 const productRoutes = require('./route/Product/product.Route');
+const orderRoutes = require('./route/Order/order.Route');
+const promotionRoutes = require('./route/Promotion/promotion.Route');
 
 // Connect to MongoDB database
 require('./config/db/connect').mongoURI;
@@ -24,6 +26,8 @@ app.get('/', (req, res) => {
 app.use('/api/v1/user', userRoutes);
 app.use('/api/v1', loginRoutes);
 app.use('/api/v1/products', productRoutes);
+app.use('/api/v1/order', orderRoutes);
+app.use('/api/v1/promotion', promotionRoutes);
 
 // Handle 404 errors
 app.use((req, res, next) => {

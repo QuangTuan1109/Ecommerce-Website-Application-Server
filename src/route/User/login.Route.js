@@ -11,4 +11,6 @@ router.patch('/signup-seller', passport.authenticate('jwt', { session: false }),
 
 router.post('/signin', passport.authenticate('local', { session: false }), Login.SignIn);
 
+router.post('/signin-seller', passport.authenticate('local', { session: false }), Login.SignInSeller);
+
 module.exports = router;

@@ -18,12 +18,32 @@ const customerSchema = new Schema ({
         unique: true,
         required: true
     },
-    Following : {
-        type: String
-    },
-    Follower : {
-        type: String
-    },
+    Following : [{
+        type: Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    Follower : [{
+        type: Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    Wishlist: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Product'
+    }],
+    usageHistory: [{
+        voucherId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Voucher'
+        },
+        currentUsage: {
+            type: Number,
+            default: 0
+        }
+    }],
+    created_at: {
+        type: Date,
+        default: Date.now
+    }
 });
 
 module.exports = mongoose.model('Customer', customerSchema);

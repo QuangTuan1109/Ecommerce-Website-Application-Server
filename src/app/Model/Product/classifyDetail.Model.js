@@ -2,14 +2,20 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const classifyDetailModel = new Schema({
-    Classify1: {
+    ProductID: {
         type: Schema.Types.ObjectId,
-        ref: 'classify1Model'
+        ref: 'productModel'
     },
-    Classify2: {
-        type: Schema.Types.ObjectId,
-        ref: 'classify2Model'
-    },
+    Options: [{
+        Option1: String,
+        Value1: String,
+        Option2: String,
+        Value2: String,
+        Image: String,
+        Price: Number,
+        Stock: Number,
+        SKU: String
+    }],
     CreateAt: {
         type: Date,
         default: Date.now
