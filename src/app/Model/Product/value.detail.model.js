@@ -1,13 +1,12 @@
 const mongoose = require('mongoose')
-const categoriesModel = require('./categories.Model')
 const Schema = mongoose.Schema
 
 const valueDetail = new Schema({
-    CategoriesID: {
+    CategoriesID: [{
         type: Schema.Types.ObjectId,
-        ref: 'CategoriesModel',
+        ref: 'Categories',
         required: true
-    },
+    }],
     AttributeName: {
         type: String
     },

@@ -31,8 +31,12 @@ router.route('/:sellerID/create-new-product').post(auth.verifyToken, auth.isSell
 
 router.route('/create-new-category').post(auth.verifyToken, auth.isAdmin, ProductController.createNewCategory);
 
-router.route('/:adminID/create-value-detail').post(auth.verifyToken, auth.isAdmin, ProductController.addValueDetail);
+router.route('/create-value-detail').post(auth.verifyToken, auth.isAdmin, ProductController.addValueDetail);
+
+router.route('/get-value-detail').post(auth.verifyToken, auth.isSeller, ProductController.getValueDetail);
 
 router.route('/add-wishlist/:productId').post(auth.verifyToken, ProductController.addWishList);
+
+router.route('/review/:productId').post(auth.verifyToken, ProductController.reviewProduct);
 
 module.exports = router;

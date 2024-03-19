@@ -7,12 +7,14 @@ const jwt = require('jsonwebtoken');
 
 const User = require('../../Model/User/user.Model')
 const Product = require('../../Model/Product/products.Model');
-const Category = require('../../Model/Product/categories.Model');
+const Categories = require('../../Model/Product/categories.Model');
 const Seller = require('../../Model/User/seller.Model');
 const ValueDetail = require('../../Model/Product/value.detail.model');
 const ClassifyDetail = require('../../Model/Product/classifyDetail.Model')
 const DiscountModel = require('../../Model/Product/Discount.Model');
 const customerModel = require('../../Model/User/customer.Model');
+const Review = require('../../Model/Product/review.Model')
+const Order = require('../../Model/Order/order.Model')
 
 const storage = new Storage({
     projectId: 'ecommerce-website-a69f9',
@@ -69,11 +71,23 @@ async function createNewProduct(req, res) {
             return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(imagePath)}?alt=media`;
         }));
 
+        const foundCategory = await Categories.findOne({ Name: Category });
+        if (!foundCategory) {
+            return res.status(404).json({ error: 'Category not found' });
+        }
+
+        let categoryPath = foundCategory.Name;
+        let parentCategory = foundCategory;
+        while (parentCategory.ParentCategoryID) {
+            parentCategory = await Categories.findById(parentCategory.ParentCategoryID);
+            categoryPath = `${parentCategory.Name} > ${categoryPath}`;
+        }
+
         const newProduct = new Product({
             SellerID: foundSeller._id,
             Name,
             Description,
-            Category,
+            Category: categoryPath,
             Detail,
             SizeTable,
             Weight,
@@ -91,6 +105,20 @@ async function createNewProduct(req, res) {
             CreateAt: new Date(),
             UpdateAt: new Date()
         });
+
+        if(Detail) {
+            const detailKeys = Object.keys(Detail)
+
+            for (let key of detailKeys) {
+                const foundValueDetails = await ValueDetail.findOne({
+                    AttributeName: key
+                });
+
+                if (!foundValueDetails.CategoriesID.includes(mongoose.Types.ObjectId(foundCategory._id)) ) {
+                    return res.status(404).json({ error: `${key} is not suitable for ${foundCategory.Name}` });
+                }   
+            }
+        }
 
         await newProduct.save();
 
@@ -119,7 +147,7 @@ async function createNewProduct(req, res) {
 
 async function getProductByCategory(req, res) {
     try {
-        const foundCategory = await Category.findOne({ _id: req.params.categoryID });
+        const foundCategory = await Categories.findOne({ _id: req.params.categoryID });
         if (!foundCategory) {
             return res.status(404).json({ message: 'Category not found' });
         }
@@ -207,14 +235,14 @@ async function createNewCategory(req, res) {
         let { ParentCategoryID, Name } = req.body;
 
         if (ParentCategoryID) {
-            const parentCategory = await Category.findOne({Name: ParentCategoryID});
+            const parentCategory = await Categories.findOne({Name: ParentCategoryID});
             if (!parentCategory) {
                 return res.status(403).json({ error: 'Parent category does not exist' });
             }
             ParentCategoryID = parentCategory._id
         }
 
-        const newCategory = new Category({ ParentCategoryID, Name, CreateAt: new Date(), UpdateAt: new Date() });
+        const newCategory = new Categories({ ParentCategoryID, Name, CreateAt: new Date(), UpdateAt: new Date() });
         await newCategory.save();
 
         return res.status(201).json({ message: 'Category created successfully' });
@@ -226,7 +254,7 @@ async function createNewCategory(req, res) {
 
 async function getCategory(req, res) {
     try {
-        const categories = await Category.find({ ParentCategoryID: null });
+        const categories = await Categories.find({ ParentCategoryID: null });
 
         if (!categories || categories.length === 0) {
             return res.status(404).json({ message: 'No categories found' });
@@ -243,13 +271,13 @@ async function deleteCategory(req, res) {
     try {
         const categoryId = req.params.categoryId;
 
-        const category = await Category.findById(mongoose.Types.ObjectId(categoryId));
+        const category = await Categories.findById(mongoose.Types.ObjectId(categoryId));
 
         if (!category) {
             return res.status(404).json({ message: "Category does not exist" });
         }
 
-        await Category.deleteMany({ $or: [{ _id: categoryId }, { ParentCategoryID: categoryId }] });
+        await Categories.deleteMany({ $or: [{ _id: categoryId }, { ParentCategoryID: categoryId }] });
 
         res.status(200).json({ message: "The category and all subcategories have been successfully deleted" });
     } catch (error) {
@@ -260,7 +288,7 @@ async function deleteCategory(req, res) {
 
 async function getSubCategory(req, res) {
     try {
-        const subCategories = await Category.find({ParentCategoryID: mongoose.Types.ObjectId(req.params.ID)});
+        const subCategories = await Categories.find({ParentCategoryID: mongoose.Types.ObjectId(req.params.ID)});
 
         if (!subCategories || subCategories.length === 0) {
             return res.status(404).json({ message: 'No subcategories found' });
@@ -275,15 +303,52 @@ async function getSubCategory(req, res) {
 
 async function addValueDetail(req, res) {
     try {
-        const { CategoriesID, AttributeName, Data } = req.body;
+        const { Category: CategoryArray, AttributeName, Data } = req.body;
+        let foundCategoriesIDs = [];
 
-        const newValueDetail = new ValueDetail({ CategoriesID, AttributeName, Data, CreateAt: new Date(), UpdateAt: new Date() });
+        for (let categoryName of CategoryArray) {
+            const foundCategory = await Categories.findOne({ Name: categoryName });
+
+            if(!foundCategory) {{
+                return res.status(404).json({ error: 'Category not found' });
+            }}
+
+            foundCategoriesIDs.push(foundCategory._id);
+        }
+
+        const newValueDetail = new ValueDetail({ CategoriesID: foundCategoriesIDs, AttributeName, Data, CreateAt: new Date(), UpdateAt: new Date() });
         await newValueDetail.save();
 
         return res.status(201).json({ message: 'Value detail added successfully' });
     } catch (error) {
         console.error('Error in addValueDetail:', error);
         return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+async function getValueDetail(req, res) {
+    try {
+        const { Category } = req.body;
+        const categories = Category.split(' > ');
+        const lastCategory = categories[categories.length - 1];
+        const foundCategory = await Categories.findOne({ Name: lastCategory });
+
+        if (!foundCategory) {
+            return res.status(404).json({ error: 'Last category not found' });
+        }
+
+        const foundValueDetails = await ValueDetail.find({
+            CategoriesID: foundCategory._id
+        });
+
+        if (!foundValueDetails.length) {
+            return res.status(404).json({ error: 'Value details not found' });
+        }
+
+        return res.status(200).json(foundValueDetails);
+    } catch (error) {
+        console.error('Error in getValueDetail:', error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 }
 
@@ -384,6 +449,52 @@ async function getWishList(req, res) {
     }
 }
 
+async function reviewProduct(req, res) {
+    try {
+        const { productId } = req.params;
+        const { rating, title, content } = req.body;
+        const token = req.headers.authorization;
+        const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+        if (!decodedToken) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const user = await User.findById(mongoose.Types.ObjectId(decodedToken.sub));
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const userId = user.activeRole;
+        if (userId != user.CustomerID) {
+            return res.status(404).json({ message: 'Your role is not correct' });
+        }
+
+        const order = await Order.findOne({
+            'customer': userId,
+            'products.product': productId,
+            'orderStatus': 'Delivered'
+        });
+
+        if (!order) {
+            return res.status(403).json({ message: 'You cannot rate this product.' });
+        }
+
+        const review = new Review({
+            user: userId,
+            product: productId,
+            rating,
+            title,
+            content
+        });
+
+        const savedReview = await review.save();
+        res.status(201).json(savedReview);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
 
 module.exports = {
     handleFileUpload,
@@ -401,4 +512,6 @@ module.exports = {
     searchProduct,
     addWishList,
     getWishList,
+    reviewProduct,
+    getValueDetail
 };
