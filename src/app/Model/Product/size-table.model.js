@@ -6,12 +6,14 @@ const sizeTableSchema = new Schema({
         type: String,
         required: true
     },
-    Parameter: {
-        type: String
-    },
-    Data: {
-        type: String
-    },
+    Data: [{
+        Parameter: {
+            type: String
+        },
+        DataParameter: {
+            type: String
+        },
+    }],
     CreateAt: {
         type: Date,
         default: Date.now

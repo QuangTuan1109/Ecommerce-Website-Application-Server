@@ -1,8 +1,9 @@
 const express = require('express')
-const router = require('express-promise-router')()
+const router = express.Router();
+const auth = require('../../config/db/auth');
 
 const userController = require('../../app/Controller/User/user.Controller');
 
-router.route('/a', userController);
+router.get('/', auth.verifyToken, userController.getUserInfor);
 
 module.exports = router

@@ -10,6 +10,14 @@ const deliveryModel = new Schema({
         type: Map,
         of: Number
     },
+    weightLimit: {
+        type: Number // Giới hạn trọng lượng cân nặng
+    },
+    sizeLimit: {
+        width: { type: Number }, // Giới hạn chiều rộng
+        length: { type: Number }, // Giới hạn chiều dài
+        height: { type: Number } // Giới hạn chiều cao
+    },
     CreateAt: {
         type: Date,
         default: Date.now

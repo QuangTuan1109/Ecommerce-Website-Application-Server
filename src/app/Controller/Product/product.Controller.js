@@ -6,6 +6,7 @@ const mongoose = require('mongoose')
 const jwt = require('jsonwebtoken');
 
 const User = require('../../Model/User/user.Model')
+const Role = require('../../Model/User/role.Model')
 const Product = require('../../Model/Product/products.Model');
 const Categories = require('../../Model/Product/categories.Model');
 const Seller = require('../../Model/User/seller.Model');
@@ -15,91 +16,73 @@ const DiscountModel = require('../../Model/Product/Discount.Model');
 const customerModel = require('../../Model/User/customer.Model');
 const Review = require('../../Model/Product/review.Model')
 const Order = require('../../Model/Order/order.Model')
-
-const storage = new Storage({
-    projectId: 'ecommerce-website-a69f9',
-    keyFilename: 'C:/Users/ADMIN/Downloads/ecommerce-website-a69f9-firebase-adminsdk-9jmgt-0b36ab9a6e.json'
-});
-
-const bucketName = 'ecommerce-website-a69f9.appspot.com';
-const bucket = storage.bucket(bucketName);
-
-const storageMulter = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'C:/Users/ADMIN/Desktop/');
-    },
-    filename: (req, file, cb) => {
-        cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({ storage: storageMulter }).fields([{ name: 'Image', maxCount: 5 }, { name: 'Video', maxCount: 1 }]);
-
-const handleFileUpload = (req, res, next) => {
-    upload(req, res, (err) => {
-        if (err) {
-            return res.status(400).json({ error: 'File upload failed' });
-        }
-        next();
-    });
-};
+const Delivery = require('../../Model/Product/Delivery.Model')
 
 async function createNewProduct(req, res) {
     try {
-        const foundSeller = await Seller.findOne({ _id: req.params.sellerID });
+        const token = req.headers.authorization;
+        if (!token) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+        if (!decodedToken) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const userID = decodedToken.sub;
+        const foundUser = await User.findById({_id: mongoose.Types.ObjectId(userID)})
+        const roleSeller = await Role.findOne({name: 'seller'})
+
+        if ((foundUser.activeRole).equals(roleSeller._id)) {
+            var foundSeller = await Seller.findById({_id: foundUser.SellerID})
+        }
         if (!foundSeller) {
             return res.status(404).json({ error: 'Seller not found' });
         }
 
-        const { Name, Description, Category, Detail, Classify, Discount, SizeTable, Weight, Height, Length, hazardousGoods, deliveryFee, preOrderGoods, SKU, Status } = req.body;
-        const videoFiles = req.files['Video'];
-        const imageFiles = req.files['Image'];
+        const { Name, Description, Video, Image, Category, Detail, Classify, Discount, SizeTable,
+                Weight, Height, Length, deliveryFee, preOrderGoods,
+                Price, Quantity, Width, SKU, Status } = req.body;
 
-        // Handle video upload
-        const videoUrls = await Promise.all(videoFiles.map(async (videoFile) => {
-            const videoName = uuidv4() + path.extname(videoFile.originalname);
-            const videoFilePath = `videos/${videoName}`;
-            await bucket.upload(videoFile.path, { destination: videoFilePath });
-            return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(videoFilePath)}?alt=media`;
-        }));
+        const categories = Category.split(' > ');
 
-        // Handle image upload
-        const imageUrls = await Promise.all(imageFiles.map(async (imageFile) => {
-            const imageName = uuidv4() + path.extname(imageFile.originalname);
-            const imagePath = `images/${imageName}`;
-            await bucket.upload(imageFile.path, { destination: imagePath });
-            return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(imagePath)}?alt=media`;
-        }));
+        let parentCategory = null;
+        for (let i = 0; i < categories.length; i++) {
+            const categoryName = categories[i];
+            const foundCategory = await Categories.findOne({ Name: categoryName });
 
-        const foundCategory = await Categories.findOne({ Name: Category });
-        if (!foundCategory) {
-            return res.status(404).json({ error: 'Category not found' });
-        }
+            if (!foundCategory) {
+                return res.status(404).json({ error: `${categoryName} not found` });
+            }
 
-        let categoryPath = foundCategory.Name;
-        let parentCategory = foundCategory;
-        while (parentCategory.ParentCategoryID) {
-            parentCategory = await Categories.findById(parentCategory.ParentCategoryID);
-            categoryPath = `${parentCategory.Name} > ${categoryPath}`;
+            if (parentCategory) {
+                if (!foundCategory.ParentCategoryID.equals(parentCategory._id)) {
+                    return res.status(404).json({ error: `${categoryName} is not a child category of ${parentCategory.Name}` });
+                }
+            }
+            parentCategory = foundCategory;
         }
 
         const newProduct = new Product({
             SellerID: foundSeller._id,
             Name,
             Description,
-            Category: categoryPath,
+            Category,
             Detail,
             SizeTable,
             Weight,
+            Width,
             Height,
             Length,
-            hazardousGoods,
             deliveryFee,
             preOrderGoods,
             SKU,
             Status,
-            Image: imageUrls,
-            Video: videoUrls,
+            Price,
+            Quantity,
+            Image,
+            Video,
             Rating: 0,
             Like: 0,
             CreateAt: new Date(),
@@ -114,15 +97,15 @@ async function createNewProduct(req, res) {
                     AttributeName: key
                 });
 
-                if (!foundValueDetails.CategoriesID.includes(mongoose.Types.ObjectId(foundCategory._id)) ) {
+                if (!foundValueDetails.categoryPaths.includes(Category) ) {
                     return res.status(404).json({ error: `${key} is not suitable for ${foundCategory.Name}` });
                 }   
             }
         }
 
-        await newProduct.save();
+       await newProduct.save();
 
-        if (Classify) {
+        if (Classify && (Price && Quantity == null || '')) {
             const classifyDetail = new ClassifyDetail({
                 ProductID: newProduct._id,
                 Options: Classify
@@ -142,6 +125,44 @@ async function createNewProduct(req, res) {
     } catch (error) {
         console.error('Error:', error);
         return res.status(500).json({ error: 'Internal Server Error' });
+    }
+}
+
+async function getAllDelivery(req, res) {
+    try {
+        const deliveryMethods = await Delivery.find({});
+
+        res.status(200).json(deliveryMethods);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Đã xảy ra lỗi khi lấy danh sách phương thức vận chuyển.' });
+    }
+}
+
+async function createDelivery(req, res) {
+    try {
+        const { deliveryMethod, deliveryFees,weightLimit, sizeLimit } = req.body;
+
+        // Check if required fields are provided
+        if (!deliveryMethod || !deliveryFees) {
+            return res.status(400).json({ message: 'Please provide all necessary information.' });
+        }
+
+        // Create a new record in the deliveryModel collection
+        const newDelivery = new Delivery({
+            deliveryMethod,
+            deliveryFees,
+            weightLimit,
+            sizeLimit
+        });
+
+        // Save the new delivery method to the database
+        const savedDelivery = await newDelivery.save();
+
+        res.status(201).json(savedDelivery); // Return the newly created delivery method
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'An error occurred while creating a new delivery method.' });
     }
 }
 
@@ -260,7 +281,8 @@ async function getCategory(req, res) {
             return res.status(404).json({ message: 'No categories found' });
         }
 
-        return res.status(200).json(categories);
+        return res.status(200).json({ data: categories });
+
     } catch (error) {
         console.error('Error in getCategory:', error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -294,29 +316,70 @@ async function getSubCategory(req, res) {
             return res.status(404).json({ message: 'No subcategories found' });
         }
 
-        return res.status(200).json(subCategories);
+        return res.status(200).json({data: subCategories});
     } catch (error) {
         console.error('Error in getSubCategory:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
 }
 
-async function addValueDetail(req, res) {
+async function getAllSubCategory(req, res) {
     try {
-        const { Category: CategoryArray, AttributeName, Data } = req.body;
-        let foundCategoriesIDs = [];
+        const parentID = req.params.id;
 
-        for (let categoryName of CategoryArray) {
-            const foundCategory = await Categories.findOne({ Name: categoryName });
+        const parentCategory = await Categories.findById(parentID);
 
-            if(!foundCategory) {{
-                return res.status(404).json({ error: 'Category not found' });
-            }}
-
-            foundCategoriesIDs.push(foundCategory._id);
+        if (!parentCategory) {
+            return res.status(404).json({ message: 'Parent category not found' });
         }
 
-        const newValueDetail = new ValueDetail({ CategoriesID: foundCategoriesIDs, AttributeName, Data, CreateAt: new Date(), UpdateAt: new Date() });
+        if (parentCategory.ParentCategoryID !== null) {
+            return res.status(400).json({ message: 'This category is not a root category' });
+        }
+
+        const getAllSubcategories = async (category, parentPath = '') => {
+            let paths = [];
+            const currentPath = parentPath ? `${parentPath} > ${category.Name}` : category.Name;
+            paths.push(currentPath);
+            const subcategories = await Categories.find({ ParentCategoryID: category._id });
+            if (subcategories.length > 0) {
+                for (let subcategory of subcategories) {
+                    const subPaths = await getAllSubcategories(subcategory, currentPath);
+                    paths = paths.concat(subPaths);
+                }
+            }
+            return paths;
+        };
+
+        const subcategoryPaths = await getAllSubcategories(parentCategory);
+
+        return res.json({ paths: subcategoryPaths });
+    } catch (error) {
+        console.error('Error in getAllSubcategories:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+async function addValueDetail(req, res) {
+    try {
+        const { Category, AttributeName, Data } = req.body;
+        let foundCategoriesIDs = [];
+
+        for (let categoryPath of Category) {
+            const categories = categoryPath.split(' > ');
+
+            for (let categoryName of categories) {
+                const foundCategory = await Categories.findOne({ Name: categoryName });
+
+                if (!foundCategory) {
+                    return res.status(404).json({ error: `Category "${categoryName}" not found` });
+                }
+            }
+
+            foundCategoriesIDs.push(categoryPath);
+        }
+
+        const newValueDetail = new ValueDetail({ categoryPaths: foundCategoriesIDs, AttributeName, Data, CreateAt: new Date(), UpdateAt: new Date() });
         await newValueDetail.save();
 
         return res.status(201).json({ message: 'Value detail added successfully' });
@@ -329,29 +392,25 @@ async function addValueDetail(req, res) {
 async function getValueDetail(req, res) {
     try {
         const { Category } = req.body;
-        const categories = Category.split(' > ');
-        const lastCategory = categories[categories.length - 1];
-        const foundCategory = await Categories.findOne({ Name: lastCategory });
 
-        if (!foundCategory) {
-            return res.status(404).json({ error: 'Last category not found' });
-        }
+        // Tìm kiếm tất cả các bản ghi trong ValueDetail có categoryPaths trùng với Category
+        const foundValueDetails = await ValueDetail.find({ categoryPaths: Category });
 
-        const foundValueDetails = await ValueDetail.find({
-            CategoriesID: foundCategory._id
-        });
-
+        // Nếu không tìm thấy bản ghi nào, trả về lỗi
         if (!foundValueDetails.length) {
-            return res.status(404).json({ error: 'Value details not found' });
+            return res.status(404).json({ error: 'No value details found for this category' });
         }
 
-        return res.status(200).json(foundValueDetails);
+        // Lấy ra AttributeName và Data của các bản ghi thỏa mãn
+        const attributeNames = foundValueDetails.map(detail => detail.AttributeName);
+        const data = foundValueDetails.map(detail => detail.Data);
+
+        return res.status(200).json({ attributeNames, data });
     } catch (error) {
         console.error('Error in getValueDetail:', error);
         return res.status(500).json({ error: 'Internal server error' });
     }
 }
-
 async function searchProduct(req, res) {
     try {
         const { name, category, minPrice, maxPrice } = req.query;
@@ -497,7 +556,6 @@ async function reviewProduct(req, res) {
 
 
 module.exports = {
-    handleFileUpload,
     createNewProduct,
     getProductByCategory,
     getProductByID,
@@ -508,10 +566,13 @@ module.exports = {
     getCategory,
     deleteCategory,
     getSubCategory,
+    getAllSubCategory,
     addValueDetail,
     searchProduct,
     addWishList,
     getWishList,
     reviewProduct,
-    getValueDetail
+    getValueDetail,
+    getAllDelivery,
+    createDelivery
 };

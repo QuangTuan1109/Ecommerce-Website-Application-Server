@@ -13,6 +13,9 @@ const sellerSchema = new Schema ({
     Address : {
         type: String
     },
+    EmailAddress : {
+        type: String
+    },
     Phone : {
         type: String,
         unique: true,
@@ -29,6 +32,10 @@ const sellerSchema = new Schema ({
     Vouchers: [{
         type: Schema.Types.ObjectId,
         ref: 'Voucher'
+    }],
+    DeliveryMethod: [{
+        type: Schema.Types.ObjectId,
+        ref: 'deliveryModel'
     }],
     created_at: {
         type: Date,

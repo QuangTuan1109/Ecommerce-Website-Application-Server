@@ -6,6 +6,7 @@ const loginRoutes = require('./route/User/login.Route');
 const productRoutes = require('./route/Product/product.Route');
 const orderRoutes = require('./route/Order/order.Route');
 const promotionRoutes = require('./route/Promotion/promotion.Route');
+const cors = require('cors');
 
 // Connect to MongoDB database
 require('./config/db/connect').mongoURI;
@@ -13,10 +14,17 @@ require('./config/db/connect').mongoURI;
 // Create Express app
 const app = express();
 
+app.use(cors({
+    origin: 'http://localhost:3000',
+    credentials: true,
+    allowedHeaders: ['Authorization', 'Content-Type']
+}));
+
+  
 // Middleware
 app.use(morgan('dev')); // HTTP request logger
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 // Routes
 app.get('/', (req, res) => {

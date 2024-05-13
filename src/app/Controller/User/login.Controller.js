@@ -5,6 +5,7 @@ const Seller = require('../../Model/User/seller.Model');
 const Customer = require('../../Model/User/customer.Model');
 const Admin = require('../../Model/User/admin.Model');
 const RoleModel = require('../../Model/User/role.Model');
+const Delivery = require('../../Model/Product/Delivery.Model')
 const { JWT_SECRET } = require('../../../config/index');
 
 async function encodedToken(userID) {
@@ -17,7 +18,7 @@ async function encodedToken(userID) {
 }
 
 async function SignUp(req, res, next) {
-    const { Fullname, Image, Address, Phone, Email, Password, Role } = req.body;
+    const { Fullname, Image, Address, Sex, Nation, DOB, ProvinceOrCity, Phone, Email, Password, Role } = req.body;
 
     try {
         // Check if email or phone is already registered
@@ -37,7 +38,7 @@ async function SignUp(req, res, next) {
                 break;
             case 'customer':
                 newUser = new User({ Email, Password });
-                const customer = new Customer({ Fullname, Image, Address, Phone });
+                const customer = new Customer({ Fullname, Image, Address, Phone, Sex, Nation, DOB, ProvinceOrCity});
                 newUser.CustomerID = customer._id;
                 customer.save();
                 break;
@@ -70,8 +71,13 @@ async function SignUp(req, res, next) {
 async function SignIn(req, res, next) {
     try {
         const user = await User.findById(req.user._id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
         const roleSeller = await RoleModel.findOne({ name: 'seller' });
         const roleCustomer = await RoleModel.findOne({ name: 'customer' });
+
         if (user.Role.includes(roleSeller._id)) {
             user.activeRole = roleCustomer._id;
             await user.save();
@@ -80,16 +86,14 @@ async function SignIn(req, res, next) {
         // Generate token
         const token = await encodedToken(req.user._id);
 
-        res.setHeader('Authorization', token);
-
-        return res.status(200).json({ success: true });
+        return res.status(200).json({ success: true, token: token});
     } catch (error) {
-        next(error);
+        return next(error);
     }
 }
 
 async function SignUpSeller(req, res, next) {
-    const { Fullname, Image, Address, Phone, Role } = req.body;
+    const { Fullname, Image, Address, Phone, EmailAddress, Role, DeliveryMethod } = req.body;
 
     try {
         const role = await RoleModel.findOne({ name: Role });
@@ -97,7 +101,14 @@ async function SignUpSeller(req, res, next) {
             return res.status(400).json({ error: { message: 'Invalid Role' } });
         }
 
-        const newSeller = new Seller({ Fullname, Image, Address, Phone });
+        const deliveryMethods = await Promise.all(DeliveryMethod.map(async method => {
+            const delivery = await Delivery.findOne({ name: method });
+            return delivery ? delivery._id : null;
+        }));
+
+        const validDeliveryMethods = deliveryMethods.filter(method => method !== null);
+
+        const newSeller = new Seller({ Fullname, Image, Address, Phone,EmailAddress, DeliveryMethod: validDeliveryMethods });
         await newSeller.save();
 
         await User.findByIdAndUpdate(req.user._id, 
@@ -115,8 +126,20 @@ async function SignUpSeller(req, res, next) {
 
 async function SignInSeller(req, res, next) {
     try {
-        const user = await User.findById(req.user._id);
+        const getToken = req.headers.authorization;
+        if (!getToken) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const decodedToken = jwt.verify(getToken, process.env.JWT_SECRET);
+        if (!decodedToken) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const customerId = decodedToken.sub;
+        const user = await User.findById(customerId);
         const roleSeller = await RoleModel.findOne({ name: 'seller' });
+
         if (user.Role.includes(roleSeller._id)) {
             user.activeRole = roleSeller._id;
             await user.save();
@@ -124,11 +147,11 @@ async function SignInSeller(req, res, next) {
             return res.status(403).json({ message: 'Forbidden: You do not have permission to access this resource.' });
         }
 
-        const token = await encodedToken(req.user._id);
+        const token = await encodedToken(customerId);
 
         res.setHeader('Authorization', token);
 
-        return res.status(200).json({ success: true });
+        return res.status(200).json({ success: true , token, token});
     } catch (error) {
         next(error);
     }

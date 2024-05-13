@@ -15,23 +15,34 @@ const productModel = new Schema({
     },
     Description: {
         type: String,
-        maxlength: 3000
+        maxlength: 3000,
+        required: true
     },
     Image: [
         {
-            type: String
+            type: String,
+            required: true
         }
     ],
     Video: [
         {
-            type: String
+            type: String,
+            required: true
         }
     ],
     Category: {
-        type: String
+        type: String,
+        required: true
     },
     Detail: {
-        type: Schema.Types.Mixed
+        type: Schema.Types.Mixed,
+        required: true
+    },
+    Price: {
+        type: Number,
+    },
+    Quantity: {
+        type: Number
     },
     Rating: {
         type: Number,
@@ -48,17 +59,23 @@ const productModel = new Schema({
     },
     Weight: Number,
     Height: Number,
+    Width: Number,
     Length: Number,
     hazardousGoods: {
         type: String,
         enum: ['Yes', 'No']
     },
-    deliveryFee: {
-        type: [{ type: Schema.Types.ObjectId, ref: 'deliveryModel' }]
-    },
+    deliveryFee: [{
+        name: String,
+        fee: Number
+    }],
     preOrderGoods: {
         type: String,
         enum: ['Yes', 'No']
+    },
+    preparationTime: {
+        type: Number,
+        require: true
     },
     Status: {
         type: String,

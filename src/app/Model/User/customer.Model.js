@@ -18,6 +18,20 @@ const customerSchema = new Schema ({
         unique: true,
         required: true
     },
+    DOB : {
+        type: Date,
+        require: true
+    },
+    Sex : {
+        type: String,
+        require: true
+    },
+    Nation : {
+        type: String,
+    },
+    ProvinceOrCity : {
+        type: String,
+    },
     Following : [{
         type: Schema.Types.ObjectId,
         ref: 'User'

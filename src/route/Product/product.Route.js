@@ -11,11 +11,17 @@ router.route('/search').get(ProductController.searchProduct);
 
 router.route('/categories').get(ProductController.getCategory);
 
+router.route('/get-all-delivery').get( ProductController.getAllDelivery); 
+
 router.route('/categories/:ID').get(ProductController.getSubCategory);
+
+router.route('/categories/subcategories/:id').get(ProductController.getAllSubCategory)
 
 router.route('/:categoryID').get(ProductController.getProductByCategory);
 
 router.route('/detail/:productID').get(auth.verifyToken, ProductController.getProductByID);
+
+router.route('/create-new-delivery').post(auth.verifyToken, auth.isAdmin, ProductController.createDelivery); 
 
 router.route('/:sellerID/all-products').get(ProductController.getAllProductBySellerID);
 
@@ -27,7 +33,7 @@ router.route('/delete-product/:productID').delete(auth.verifyToken, auth.isSelle
 
 router.route('/delete-category/:categoryId').delete(auth.verifyToken, auth.isAdmin, ProductController.deleteCategory);
 
-router.route('/:sellerID/create-new-product').post(auth.verifyToken, auth.isSeller, ProductController.handleFileUpload, ProductController.createNewProduct);
+router.route('/create-new-product').post(auth.verifyToken, auth.isSeller, ProductController.createNewProduct);
 
 router.route('/create-new-category').post(auth.verifyToken, auth.isAdmin, ProductController.createNewCategory);
 

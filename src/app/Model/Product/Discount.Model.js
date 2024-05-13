@@ -7,17 +7,14 @@ const DiscountModel = new Schema({
         ref: 'productModel'
     },
     Value: [{
-        From: {
+        from: {
             type: Number,
-            required: true
         },
-        To: {
+        to: {
             type: Number,
-            required: true
         },
-        UnitPrice: {
+        price: {
             type: Number,
-            required: true
         },
     }],
     CreateAt: {

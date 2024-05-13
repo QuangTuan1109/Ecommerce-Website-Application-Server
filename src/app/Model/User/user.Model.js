@@ -5,15 +5,15 @@ const bcrypt = require('bcryptjs');
 const userModelSchema = new Schema ({
     AdminID : {
         type: Schema.Types.ObjectId,
-        ref: 'adminModel'
+        ref: 'Admin'
     },
     SellerID: {
         type: Schema.Types.ObjectId,
-        ref: 'sellerModel'
+        ref: 'Seller'
     },
     CustomerID: {
         type: Schema.Types.ObjectId,
-        ref: 'customerModel'
+        ref: 'Customer'
     },
     Role : [{
         type: Schema.Types.ObjectId,
