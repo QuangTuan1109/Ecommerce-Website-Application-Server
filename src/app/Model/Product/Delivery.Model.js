@@ -18,14 +18,6 @@ const deliveryModel = new Schema({
         length: { type: Number }, // Giới hạn chiều dài
         height: { type: Number } // Giới hạn chiều cao
     },
-    CreateAt: {
-        type: Date,
-        default: Date.now
-    },
-    UpdateAt: {
-        type: Date,
-        default: Date.now
-    }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('deliveryModel', deliveryModel);

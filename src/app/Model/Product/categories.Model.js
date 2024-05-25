@@ -10,14 +10,6 @@ const categoriesModel = new Schema({
         type: String,
         required: true
     },
-    CreateAt: {
-        type: Date,
-        default: Date.now
-    },
-    UpdateAt: {
-        type: Date,
-        default: Date.now
-    }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('Categories', categoriesModel);

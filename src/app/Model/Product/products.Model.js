@@ -24,12 +24,10 @@ const productModel = new Schema({
             required: true
         }
     ],
-    Video: [
-        {
+    Video: {
             type: String,
             required: true
-        }
-    ],
+    },
     Category: {
         type: String,
         required: true
@@ -47,11 +45,6 @@ const productModel = new Schema({
     Rating: {
         type: Number,
         default: 0
-    },
-    SizeTable: {
-        type: Schema.Types.ObjectId,
-        ref: 'sizeTableModel',
-        default: null
     },
     Like: {
         type: Number,
@@ -93,15 +86,7 @@ const productModel = new Schema({
     DiscountValue: {
         type: Number,
         default: 0
-    },
-    CreateAt: {
-        type: Date,
-        default: Date.now
-    },
-    UpdateAt: {
-        type: Date,
-        default: Date.now
-    },
-})
+    }
+}, { timestamps: true });
 
 module.exports = mongoose.model('productModel', productModel)

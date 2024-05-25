@@ -49,7 +49,7 @@ const userModelSchema = new Schema ({
         type: String, 
         maxlength: 50,
     }
-});
+}, { timestamps: true });
 
 
 userModelSchema.pre('save', function(next) {

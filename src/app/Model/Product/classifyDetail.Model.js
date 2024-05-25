@@ -15,15 +15,7 @@ const classifyDetailModel = new Schema({
         Price: Number,
         Stock: Number,
         SKU: String
-    }],
-    CreateAt: {
-        type: Date,
-        default: Date.now
-    },
-    UpdateAt: {
-        type: Date,
-        default: Date.now
-    }
-});
+    }]
+},  { timestamps: true });
 
 module.exports = mongoose.model('classifyDetailModel', classifyDetailModel);

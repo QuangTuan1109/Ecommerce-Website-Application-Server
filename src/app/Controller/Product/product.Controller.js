@@ -18,6 +18,49 @@ const Review = require('../../Model/Product/review.Model')
 const Order = require('../../Model/Order/order.Model')
 const Delivery = require('../../Model/Product/Delivery.Model')
 
+const storage = new Storage({
+    projectId: 'ecommerce-website-a69f9',
+    keyFilename: 'C:/Users/ADMIN/Downloads/ecommerce-website-a69f9-firebase-adminsdk-9jmgt-0b36ab9a6e.json'
+});
+
+const bucketName = 'ecommerce-website-a69f9.appspot.com';
+const bucket = storage.bucket(bucketName);
+const storageMulter = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'C:/Users/ADMIN/Desktop/');
+    },
+    filename: (req, file, cb) => {
+        cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ storage: storageMulter }).fields([{ name: 'Image', maxCount: 5 }, { name: 'Video', maxCount: 1 }]);
+
+const handleFileUpload = (req, res, next) => {
+    upload(req, res, (err) => {
+        if (err) {
+            return res.status(400).json({ error: 'File upload failed' });
+        }
+        next();
+    });
+};
+
+async function handleUploadVideo(req, res) {
+
+    const videoFiles = req.files['Video'];
+
+    // Handle video upload
+    const videoUrls = await Promise.all(videoFiles.map(async (videoFile) => {
+        const videoName = uuidv4() + path.extname(videoFile.originalname);
+        const videoFilePath = `videos/${videoName}`;
+        await bucket.upload(videoFile.path, { destination: videoFilePath });
+        return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(videoFilePath)}?alt=media`;
+    }));
+
+    return res.status(200).json({ data: videoUrls});
+
+}
+
 async function createNewProduct(req, res) {
     try {
         const token = req.headers.authorization;
@@ -41,9 +84,9 @@ async function createNewProduct(req, res) {
             return res.status(404).json({ error: 'Seller not found' });
         }
 
-        const { Name, Description, Video, Image, Category, Detail, Classify, Discount, SizeTable,
+        const { Name, Description, Video, Image, Category, Detail, Classify, Discount,
                 Weight, Height, Length, deliveryFee, preOrderGoods,
-                Price, Quantity, Width, SKU, Status } = req.body;
+                Price, Quantity, Width, preparationTime, SKU, Status } = req.body;
 
         const categories = Category.split(' > ');
 
@@ -70,7 +113,6 @@ async function createNewProduct(req, res) {
             Description,
             Category,
             Detail,
-            SizeTable,
             Weight,
             Width,
             Height,
@@ -82,11 +124,10 @@ async function createNewProduct(req, res) {
             Price,
             Quantity,
             Image,
+            preparationTime,
             Video,
             Rating: 0,
             Like: 0,
-            CreateAt: new Date(),
-            UpdateAt: new Date()
         });
 
         if(Detail) {
@@ -105,7 +146,7 @@ async function createNewProduct(req, res) {
 
        await newProduct.save();
 
-        if (Classify && (Price && Quantity == null || '')) {
+        if (Classify) {
             const classifyDetail = new ClassifyDetail({
                 ProductID: newProduct._id,
                 Options: Classify
@@ -195,8 +236,8 @@ async function getProductByID(req, res) {
 
         const productWithDetails = {
             ...foundProduct.toJSON(),
-            discounts: foundDiscounts,
-            classifyDetails: foundClassifyDetails
+            discounts: foundDiscounts.length > 0 ? foundDiscounts : null,
+            classifyDetails: foundClassifyDetails.length > 0 ? foundClassifyDetails : null
         };
 
         return res.status(200).json(productWithDetails);
@@ -208,8 +249,28 @@ async function getProductByID(req, res) {
 
 async function getAllProductBySellerID(req, res) {
     try {
-        const sellerProducts = await Product.find({ SellerID: req.params.sellerID });
-        return res.status(200).json(sellerProducts);
+        const foundUser= await User.findOne({ _id:  req.params.userID })
+
+        if (foundUser) {
+            const sellerProducts = await Product.find({ SellerID: foundUser.SellerID });
+            const products = [];
+            
+            for (var i = 0; i < sellerProducts.length; i++ ) {
+                const product = sellerProducts[i];
+                const getClassify = await ClassifyDetail.findOne({ProductID: product._id})
+                
+                if (getClassify) {
+                    const productWithClassify = {
+                        ...product.toObject(),
+                        Classify: getClassify
+                    };
+                    products.push(productWithClassify);
+                } else {
+                    products.push(product.toObject());
+                }
+            }
+            return res.status(200).json({data: products});
+        }
     } catch (error) {
         console.error('Error in getAllProductBySellerID:', error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -221,11 +282,64 @@ async function updateProduct(req, res) {
         const { productID } = req.params;
         const updatedFields = req.body;
 
-        const product = await Product.findByIdAndUpdate(productID, updatedFields, { new: true });
+        // Extract Classify and Discount from the updatedFields if they exist
+        const { Classify: classifyData, Discount: discountData, ...productUpdates } = updatedFields;
+
+        // Update the product itself without Classify and Discount
+        const product = await Product.findByIdAndUpdate(productID, { ...productUpdates, updatedAt: Date.now() }, { new: true });
 
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }
+
+        // Check and update Classify if exists
+        const classifyRecord = await ClassifyDetail.findOne({ ProductID: mongoose.Types.ObjectId(productID) });
+
+            if (classifyRecord) {
+                if (classifyData) {
+                    await ClassifyDetail.findByIdAndUpdate(
+                        classifyRecord._id,
+                        { $set: {
+                            Options: classifyData,
+                            updatedAt: Date.now() 
+                        } },
+                        { new: true }
+                    );
+                } else {
+                    await ClassifyDetail.findByIdAndDelete(classifyRecord._id);
+                }
+            } else {
+                if (classifyData) {
+                    await ClassifyDetail.create({
+                        ProductID: mongoose.Types.ObjectId(productID),
+                        Options: [...classifyData]
+                    });
+                }
+            }
+
+        // Check and update Discount if exists
+        const discountRecord = await DiscountModel.findOne({ ProductID: mongoose.Types.ObjectId(productID) });
+            if (discountRecord) {
+                if (discountData) {
+                    await DiscountModel.findByIdAndUpdate(
+                        discountRecord._id,
+                        { $set: {
+                            Value: discountData, 
+                            updatedAt: Date.now() 
+                        } },
+                        { new: true }
+                    );
+                } else {
+                    await DiscountModel.findByIdAndDelete(discountRecord._id);
+                }
+            } else {
+                if (discountData) {
+                    await DiscountModel.create({
+                        ProductID: mongoose.Types.ObjectId(productID),
+                        Value: [...discountData]
+                    });
+                }
+            }
 
         return res.status(200).json({ message: 'Product updated successfully', product });
     } catch (error) {
@@ -237,6 +351,17 @@ async function updateProduct(req, res) {
 async function deleteProduct(req, res) {
     try {
         const { productID } = req.params;
+
+        const classifyRecord = await ClassifyDetail.findOne({ ProductID: productID });
+        const discountRecord = await DiscountModel.findOne({ ProductID: productID });
+
+        if (classifyRecord) {
+            await ClassifyDetail.findByIdAndDelete(classifyRecord._id);
+        }
+
+        if (discountRecord) {
+            await DiscountModel.findByIdAndDelete(discountRecord._id);
+        }
 
         const deletedProduct = await Product.findByIdAndDelete(productID);
 
@@ -282,6 +407,38 @@ async function getCategory(req, res) {
         }
 
         return res.status(200).json({ data: categories });
+
+    } catch (error) {
+        console.error('Error in getCategory:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+async function getClassify(req, res) {
+    try {
+        const classify = await ClassifyDetail.findOne({ ProductID: req.params.productID });
+
+        if (!classify) {
+            return res.status(404).json({ message: 'No classify found' });
+        }
+
+        return res.status(200).json({ data: classify });
+
+    } catch (error) {
+        console.error('Error in getCategory:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+async function getWholesale(req, res) {
+    try {
+        const wholesale = await DiscountModel.findOne({ ProductID: req.params.productID });
+
+        if (!wholesale) {
+            return res.status(404).json({ message: 'No wholesale found' });
+        }
+
+        return res.status(200).json({ data: wholesale });
 
     } catch (error) {
         console.error('Error in getCategory:', error);
@@ -438,7 +595,6 @@ async function searchProduct(req, res) {
         return res.status(500).json({ message: 'Internal server error' });
     }
 }
-
 async function addWishList(req, res) {
     try {
         const productId = req.params.productId;
@@ -554,8 +710,9 @@ async function reviewProduct(req, res) {
     }
 }
 
-
 module.exports = {
+    handleFileUpload,
+    handleUploadVideo,
     createNewProduct,
     getProductByCategory,
     getProductByID,
@@ -574,5 +731,7 @@ module.exports = {
     reviewProduct,
     getValueDetail,
     getAllDelivery,
-    createDelivery
+    createDelivery,
+    getClassify,
+    getWholesale
 };

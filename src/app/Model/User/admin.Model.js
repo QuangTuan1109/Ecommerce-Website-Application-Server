@@ -24,6 +24,6 @@ const adminSchema = new Schema ({
     Follower : {
         type: String
     },
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('Admin', adminSchema);

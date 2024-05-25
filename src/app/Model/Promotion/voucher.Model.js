@@ -61,6 +61,6 @@ const voucherSchema = new Schema ({
         type: Schema.Types.ObjectId,
         ref: 'Category'
     },
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('Voucher', voucherSchema);

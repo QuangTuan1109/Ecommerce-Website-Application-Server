@@ -21,13 +21,19 @@ router.route('/:categoryID').get(ProductController.getProductByCategory);
 
 router.route('/detail/:productID').get(auth.verifyToken, ProductController.getProductByID);
 
+router.route('/classify/:productID').get(auth.verifyToken, ProductController.getClassify);
+
+router.route('/wholesales/:productID').get(auth.verifyToken, ProductController.getWholesale);
+
 router.route('/create-new-delivery').post(auth.verifyToken, auth.isAdmin, ProductController.createDelivery); 
 
-router.route('/:sellerID/all-products').get(ProductController.getAllProductBySellerID);
+router.route('/upload-video').post(auth.verifyToken, ProductController.handleFileUpload, ProductController.handleUploadVideo); 
+
+router.route('/:userID/all-products').get(ProductController.getAllProductBySellerID);
 
 router.route('/wishlist').post(auth.verifyToken, ProductController.getWishList);
 
-router.route('/update-product/:productID').patch(auth.verifyToken, auth.isSeller, ProductController.updateProduct);
+router.route('/update-product/:productID').put(auth.verifyToken, auth.isSeller, ProductController.updateProduct);
 
 router.route('/delete-product/:productID').delete(auth.verifyToken, auth.isSeller, ProductController.deleteProduct);
 

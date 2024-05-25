@@ -24,14 +24,6 @@ const cartModel = new Schema({
         ref: 'Voucher',
         default: null
     },
-    CreateAt: {
-        type: Date,
-        default: Date.now
-    },
-    UpdateAt: {
-        type: Date,
-        default: Date.now
-    }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('Cart', cartModel);

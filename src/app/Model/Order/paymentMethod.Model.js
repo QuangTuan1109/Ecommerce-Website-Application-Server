@@ -19,14 +19,6 @@ const paymentMethodSchema = new Schema({
     cvv: {
         type: String,
     },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('PaymentMethod', paymentMethodSchema);

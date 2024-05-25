@@ -37,10 +37,6 @@ const sellerSchema = new Schema ({
         type: Schema.Types.ObjectId,
         ref: 'deliveryModel'
     }],
-    created_at: {
-        type: Date,
-        default: Date.now
-    }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('Seller', sellerSchema);

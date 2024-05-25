@@ -54,10 +54,6 @@ const customerSchema = new Schema ({
             default: 0
         }
     }],
-    created_at: {
-        type: Date,
-        default: Date.now
-    }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('Customer', customerSchema);

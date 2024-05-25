@@ -17,14 +17,6 @@ const DiscountModel = new Schema({
             type: Number,
         },
     }],
-    CreateAt: {
-        type: Date,
-        default: Date.now
-    },
-    UpdateAt: {
-        type: Date,
-        default: Date.now
-    }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('DiscountModel', DiscountModel);

@@ -26,10 +26,6 @@ const reviewSchema = new Schema({
         type: String,
         required: true
     },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
     helpfulCount: {
         type: Number,
         default: 0
@@ -40,6 +36,6 @@ const reviewSchema = new Schema({
     sellerResponseDate: {
         type: Date
     }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('Review', reviewSchema);
