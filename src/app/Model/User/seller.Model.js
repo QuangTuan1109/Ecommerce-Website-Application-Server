@@ -33,10 +33,6 @@ const sellerSchema = new Schema ({
         type: Schema.Types.ObjectId,
         ref: 'Voucher'
     }],
-    DeliveryMethod: [{
-        type: Schema.Types.ObjectId,
-        ref: 'deliveryModel'
-    }],
 }, { timestamps: true });
 
 module.exports = mongoose.model('Seller', sellerSchema);

@@ -3,9 +3,7 @@ const bcrypt = require('bcryptjs');
 const User = require('../../Model/User/user.Model');
 const Seller = require('../../Model/User/seller.Model');
 const Customer = require('../../Model/User/customer.Model');
-const Admin = require('../../Model/User/admin.Model');
 const RoleModel = require('../../Model/User/role.Model');
-const Delivery = require('../../Model/Product/Delivery.Model')
 const { JWT_SECRET } = require('../../../config/index');
 
 async function encodedToken(userID) {
@@ -18,33 +16,19 @@ async function encodedToken(userID) {
 }
 
 async function SignUp(req, res, next) {
-    const { Fullname, Image, Address, Sex, Nation, DOB, ProvinceOrCity, Phone, Email, Password, Role } = req.body;
+    const { Fullname, Image, Address, Sex, Nation, DOB, ProvinceOrCity, Phone, Email, Password } = req.body;
 
     try {
         // Check if email or phone is already registered
-        const existingUser = await User.findOne({ $or: [{ Email }, { 'CustomerID.Phone': Phone }, { 'AdminID.Phone': Phone }] });
+        const existingUser = await User.findOne({ $or: [{ Email }, { 'CustomerID.Phone': Phone }] });
         if (existingUser) {
             return res.status(403).json({ error: { message: 'Email or Phone is already registered' } });
         }
 
-        // Create user based on role
-        let newUser;
-        switch (Role) {
-            case 'admin':
-                newUser = new User({ Email, Password });
-                const admin = new Admin({ Fullname, Image, Address, Phone });
-                newUser.AdminID = admin._id;
-                admin.save();
-                break;
-            case 'customer':
-                newUser = new User({ Email, Password });
-                const customer = new Customer({ Fullname, Image, Address, Phone, Sex, Nation, DOB, ProvinceOrCity});
-                newUser.CustomerID = customer._id;
-                customer.save();
-                break;
-            default:
-                return res.status(400).json({ error: { message: 'Invalid role' } });
-        }
+        // Create user for customer
+        const newUser = new User({ Email, Password });
+        const customer = new Customer({ Fullname, Image, Address, Phone, Sex, Nation, DOB, ProvinceOrCity});
+        newUser.CustomerID = customer._id;
 
         // Encrypt password
         if (Password) {
@@ -55,9 +39,10 @@ async function SignUp(req, res, next) {
 
         // Save user
         await newUser.save();
+        await customer.save();
 
-        // Assign role to user
-        const role = await RoleModel.findOne({ name: Role });
+        // Assign role to user (default to 'customer')
+        const role = await RoleModel.findOne({ name: 'customer' }); // Assuming 'customer' role exists
         newUser.Role.push(role._id);
         await newUser.save();
 
@@ -67,6 +52,7 @@ async function SignUp(req, res, next) {
         return res.status(500).json({ error: { message: 'Internal server error' } });
     }
 }
+
 
 async function SignIn(req, res, next) {
     try {
@@ -93,22 +79,15 @@ async function SignIn(req, res, next) {
 }
 
 async function SignUpSeller(req, res, next) {
-    const { Fullname, Image, Address, Phone, EmailAddress, Role, DeliveryMethod } = req.body;
+    const { Fullname, Image, Address, Phone, EmailAddress,  } = req.body;
 
     try {
-        const role = await RoleModel.findOne({ name: Role });
+        const role = await RoleModel.findOne({ name: 'seller' });
         if (!role) {
             return res.status(400).json({ error: { message: 'Invalid Role' } });
         }
 
-        const deliveryMethods = await Promise.all(DeliveryMethod.map(async method => {
-            const delivery = await Delivery.findOne({ name: method });
-            return delivery ? delivery._id : null;
-        }));
-
-        const validDeliveryMethods = deliveryMethods.filter(method => method !== null);
-
-        const newSeller = new Seller({ Fullname, Image, Address, Phone,EmailAddress, DeliveryMethod: validDeliveryMethods });
+        const newSeller = new Seller({ Fullname, Image, Address, Phone, EmailAddress });
         await newSeller.save();
 
         await User.findByIdAndUpdate(req.user._id, 
