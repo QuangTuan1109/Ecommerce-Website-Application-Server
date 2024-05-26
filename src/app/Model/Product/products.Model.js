@@ -39,12 +39,17 @@ const productModel = new Schema({
     Price: {
         type: Number,
     },
+    PriceRange: {
+        type: String,
+    },
     Quantity: {
         type: Number
     },
     Rating: {
         type: Number,
-        default: 0
+        default: 0,
+        min: 0,
+        max: 5
     },
     Like: {
         type: Number,

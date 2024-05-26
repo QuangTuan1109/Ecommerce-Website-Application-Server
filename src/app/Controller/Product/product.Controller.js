@@ -74,19 +74,27 @@ async function createNewProduct(req, res) {
         }
 
         const userID = decodedToken.sub;
-        const foundUser = await User.findById({_id: mongoose.Types.ObjectId(userID)})
-        const roleSeller = await Role.findOne({name: 'seller'})
+        const foundUser = await User.findById({ _id: mongoose.Types.ObjectId(userID) });
+        const roleSeller = await Role.findOne({ name: 'seller' });
 
-        if ((foundUser.activeRole).equals(roleSeller._id)) {
-            var foundSeller = await Seller.findById({_id: foundUser.SellerID})
+        if (!foundUser) {
+            return res.status(404).json({ error: 'User not found' });
         }
+
+        if (!foundUser.activeRole.equals(roleSeller._id)) {
+            return res.status(403).json({ error: 'User is not a seller' });
+        }
+
+        const foundSeller = await Seller.findById({ _id: foundUser.SellerID });
         if (!foundSeller) {
             return res.status(404).json({ error: 'Seller not found' });
         }
 
-        const { Name, Description, Video, Image, Category, Detail, Classify, Discount,
-                Weight, Height, Length, deliveryFee, preOrderGoods,
-                Price, Quantity, Width, preparationTime, SKU, Status } = req.body;
+        const {
+            Name, Description, Video, Image, Category, Detail, Classify, Discount,
+            Weight, Height, Length, deliveryFee, preOrderGoods,
+            Price, Quantity, Width, preparationTime, SKU, Status
+        } = req.body;
 
         const categories = Category.split(' > ');
 
@@ -107,6 +115,15 @@ async function createNewProduct(req, res) {
             parentCategory = foundCategory;
         }
 
+        let productPrice;
+
+        if (Classify && Classify.length > 0) {
+            const prices = Classify.map(option => option.Price);
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            productPrice = `${minPrice.toLocaleString()}đ - ${maxPrice.toLocaleString()}đ`;
+        }
+
         const newProduct = new Product({
             SellerID: foundSeller._id,
             Name,
@@ -122,6 +139,7 @@ async function createNewProduct(req, res) {
             SKU,
             Status,
             Price,
+            PriceRange: productPrice, 
             Quantity,
             Image,
             preparationTime,
@@ -129,8 +147,10 @@ async function createNewProduct(req, res) {
             Rating: 0,
             Like: 0,
         });
+        
+        await newProduct.save();
 
-        if(Detail) {
+        if (Detail) {
             const detailKeys = Object.keys(Detail)
 
             for (let key of detailKeys) {
@@ -138,13 +158,11 @@ async function createNewProduct(req, res) {
                     AttributeName: key
                 });
 
-                if (!foundValueDetails.categoryPaths.includes(Category) ) {
+                if (!foundValueDetails.categoryPaths.includes(Category)) {
                     return res.status(404).json({ error: `${key} is not suitable for ${foundCategory.Name}` });
-                }   
+                }
             }
         }
-
-       await newProduct.save();
 
         if (Classify) {
             const classifyDetail = new ClassifyDetail({
@@ -214,8 +232,24 @@ async function getProductByCategory(req, res) {
             return res.status(404).json({ message: 'Category not found' });
         }
 
-        const products = await Product.find({ Category: foundCategory.Name });
-        return res.status(200).json(products);
+        const regex = new RegExp(`.*${foundCategory.Name}.*`);
+        const products = await Product.find({ Category: { $regex: regex } });
+
+        const classify = await ClassifyDetail.find({ ProductID: products.map(product => product._id) });
+        const discount = await DiscountModel.find({ ProductID: products.map(product => product._id) });
+
+        const productsWithDetails = products.map(product => {
+            const productClassify = classify.filter(item => item.ProductID.toString() === product._id.toString());
+            const productDiscount = discount.filter(item => item.ProductID.toString() === product._id.toString());
+
+            return {
+                ...product.toObject(),
+                classify: productClassify,
+                discount: productDiscount
+            };
+        });
+        
+        return res.status(200).json(productsWithDetails);
     } catch (error) {
         console.error('Error in getProductByCategory:', error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -224,20 +258,20 @@ async function getProductByCategory(req, res) {
 
 async function getProductByID(req, res) {
     try {
-        const productID = req.params.productID;
+        const productId = req.params.productID;
 
-        const foundProduct = await Product.findById(productID);
+        const foundProduct = await Product.findById({_id: mongoose.Types.ObjectId(productId)});
         if (!foundProduct) {
             return res.status(404).json({ message: 'Product not found' });
         }
 
-        const foundDiscounts = await DiscountModel.find({ ProductID: productID });
-        const foundClassifyDetails = await ClassifyDetail.find({ ProductID: productID });
+        const foundDiscounts = await DiscountModel.find({ ProductID: mongoose.Types.ObjectId(productId) });
+        const foundClassifyDetails = await ClassifyDetail.find({ ProductID: mongoose.Types.ObjectId(productId) });
 
         const productWithDetails = {
             ...foundProduct.toJSON(),
-            discounts: foundDiscounts.length > 0 ? foundDiscounts : null,
-            classifyDetails: foundClassifyDetails.length > 0 ? foundClassifyDetails : null
+            Discount: foundDiscounts.length > 0 ? foundDiscounts : null,
+            Classify: foundClassifyDetails.length > 0 ? foundClassifyDetails : null
         };
 
         return res.status(200).json(productWithDetails);
@@ -494,23 +528,22 @@ async function getAllSubCategory(req, res) {
             return res.status(400).json({ message: 'This category is not a root category' });
         }
 
-        const getAllSubcategories = async (category, parentPath = '') => {
-            let paths = [];
-            const currentPath = parentPath ? `${parentPath} > ${category.Name}` : category.Name;
-            paths.push(currentPath);
-            const subcategories = await Categories.find({ ParentCategoryID: category._id });
-            if (subcategories.length > 0) {
-                for (let subcategory of subcategories) {
-                    const subPaths = await getAllSubcategories(subcategory, currentPath);
-                    paths = paths.concat(subPaths);
-                }
+        const getAllSubcategories = async (parentID) => {
+            const subcategories = await Categories.find({ ParentCategoryID: parentID }, '_id Name');
+            let results = [];
+
+            for (const subcategory of subcategories) {
+                results.push({ id: subcategory._id, name: subcategory.Name });
+                const subSubcategories = await getAllSubcategories(subcategory._id);
+                results = results.concat(subSubcategories);
             }
-            return paths;
+
+            return results;
         };
 
-        const subcategoryPaths = await getAllSubcategories(parentCategory);
+        const subcategoryList = await getAllSubcategories(parentID);
 
-        return res.json({ paths: subcategoryPaths });
+        return res.json({ data: subcategoryList });
     } catch (error) {
         console.error('Error in getAllSubcategories:', error);
         return res.status(500).json({ message: 'Internal server error' });
