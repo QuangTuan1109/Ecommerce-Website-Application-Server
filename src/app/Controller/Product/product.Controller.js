@@ -61,6 +61,53 @@ async function handleUploadVideo(req, res) {
 
 }
 
+async function handleUploadImage(req, res) {
+    const imageFiles = req.files['Image'];
+
+    // Handle image upload
+    const imageUrls = await Promise.all(imageFiles.map(async (imageFile) => {
+        const imageName = uuidv4() + path.extname(imageFile.originalname);
+        const imagePath = `images/${imageName}`;
+        await bucket.upload(imageFile.path, { destination: imagePath });
+        return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(imagePath)}?alt=media`;
+    }));
+
+    return res.status(200).json({ data: imageUrls});
+
+}
+
+async function deleteFile(filePath) {
+    try {
+        await bucket.file(filePath).delete();
+        console.log('File deleted successfully.');
+    } catch (error) {
+        console.error('Error deleting file:', error);
+        throw error; // Ném lỗi nếu có lỗi xảy ra để xử lý ở nơi gọi hàm
+    }
+}
+
+async function deleteImage(req, res) {
+    const imagePath = req.params.imagePath;
+    try {
+        await deleteFile(imagePath);
+        res.status(200).json({ message: 'Image deleted successfully.' });
+    } catch (error) {
+        console.error('Error deleting image:', error);
+        res.status(500).json({ error: 'An error occurred while deleting image.' });
+    }
+}
+
+async function deleteVideo(req, res) {
+    const videoPath = req.params.videoPath;
+    try {
+        await deleteFile(videoPath);
+        res.status(200).json({ message: 'Video deleted successfully.' });
+    } catch (error) {
+        console.error('Error deleting video:', error);
+        res.status(500).json({ error: 'An error occurred while deleting video.' });
+    }
+}
+
 async function createNewProduct(req, res) {
     try {
         const token = req.headers.authorization;
@@ -99,9 +146,10 @@ async function createNewProduct(req, res) {
         const categories = Category.split(' > ');
 
         let parentCategory = null;
+        let foundCategory = null;
         for (let i = 0; i < categories.length; i++) {
             const categoryName = categories[i];
-            const foundCategory = await Categories.findOne({ Name: categoryName });
+            foundCategory = await Categories.findOne({ Name: categoryName });
 
             if (!foundCategory) {
                 return res.status(404).json({ error: `${categoryName} not found` });
@@ -114,7 +162,7 @@ async function createNewProduct(req, res) {
             }
             parentCategory = foundCategory;
         }
-
+        
         let productPrice;
 
         if (Classify && Classify.length > 0) {
@@ -157,6 +205,8 @@ async function createNewProduct(req, res) {
                 const foundValueDetails = await ValueDetail.findOne({
                     AttributeName: key
                 });
+
+                console.log(foundValueDetails)
 
                 if (!foundValueDetails.categoryPaths.includes(Category)) {
                     return res.status(404).json({ error: `${key} is not suitable for ${foundCategory.Name}` });
@@ -745,7 +795,10 @@ async function reviewProduct(req, res) {
 
 module.exports = {
     handleFileUpload,
+    handleUploadImage,
     handleUploadVideo,
+    deleteImage,
+    deleteVideo,
     createNewProduct,
     getProductByCategory,
     getProductByID,

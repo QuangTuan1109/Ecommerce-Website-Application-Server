@@ -1,10 +1,77 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const { v4: uuidv4 } = require('uuid');
+const { Storage } = require('@google-cloud/storage');
+const multer = require('multer');
+const path = require('path');
+
 const User = require('../../Model/User/user.Model');
 const Seller = require('../../Model/User/seller.Model');
 const Customer = require('../../Model/User/customer.Model');
 const RoleModel = require('../../Model/User/role.Model');
 const { JWT_SECRET } = require('../../../config/index');
+
+const storage = new Storage({
+    projectId: 'ecommerce-website-a69f9',
+    keyFilename: 'C:/Users/ADMIN/Downloads/ecommerce-website-a69f9-firebase-adminsdk-9jmgt-0b36ab9a6e.json'
+});
+
+const bucketName = 'ecommerce-website-a69f9.appspot.com';
+const bucket = storage.bucket(bucketName);
+const storageMulter = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'C:/Users/ADMIN/Desktop/');
+    },
+    filename: (req, file, cb) => {
+        cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ storage: storageMulter }).fields([{ name: 'Image', maxCount: 5 }]);
+
+const handleFileUpload = (req, res, next) => {
+    upload(req, res, (err) => {
+        if (err) {
+            return res.status(400).json({ error: 'File upload failed' });
+        }
+        next();
+    });
+};
+
+async function handleUploadImage(req, res) {
+    const imageFiles = req.files['Image'];
+
+    // Handle image upload
+    const imageUrls = await Promise.all(imageFiles.map(async (imageFile) => {
+        const imageName = uuidv4() + path.extname(imageFile.originalname);
+        const imagePath = `images/${imageName}`;
+        await bucket.upload(imageFile.path, { destination: imagePath });
+        return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(imagePath)}?alt=media`;
+    }));
+
+    return res.status(200).json({ data: imageUrls});
+}
+
+async function deleteFile(filePath) {
+    try {
+        await bucket.file(filePath).delete();
+        console.log('File deleted successfully.');
+    } catch (error) {
+        console.error('Error deleting file:', error);
+        throw error; // Ném lỗi nếu có lỗi xảy ra để xử lý ở nơi gọi hàm
+    }
+}
+
+async function deleteImage(req, res) {
+    const imagePath = req.params.imagePath;
+    try {
+        await deleteFile(imagePath);
+        res.status(200).json({ message: 'Image deleted successfully.' });
+    } catch (error) {
+        console.error('Error deleting image:', error);
+        res.status(500).json({ error: 'An error occurred while deleting image.' });
+    }
+}
 
 async function encodedToken(userID) {
     return jwt.sign({
@@ -52,7 +119,6 @@ async function SignUp(req, res, next) {
         return res.status(500).json({ error: { message: 'Internal server error' } });
     }
 }
-
 
 async function SignIn(req, res, next) {
     try {
@@ -137,6 +203,9 @@ async function SignInSeller(req, res, next) {
 }
 
 module.exports = {
+    deleteImage,
+    handleUploadImage,
+    handleFileUpload,
     SignUp,
     SignIn,
     SignUpSeller,

@@ -20,11 +20,10 @@ app.use(cors({
     allowedHeaders: ['Authorization', 'Content-Type']
 }));
 
-  
 // Middleware
 app.use(morgan('dev')); // HTTP request logger
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Increased limit
+app.use(express.json({ limit: '10mb' })); // Increased limit
 
 // Routes
 app.get('/', (req, res) => {

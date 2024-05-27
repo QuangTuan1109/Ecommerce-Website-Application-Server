@@ -29,6 +29,8 @@ router.route('/create-new-delivery').post(auth.verifyToken, auth.isAdmin, Produc
 
 router.route('/upload-video').post(auth.verifyToken, ProductController.handleFileUpload, ProductController.handleUploadVideo); 
 
+router.route('/upload-image').post(auth.verifyToken, ProductController.handleFileUpload, ProductController.handleUploadImage); 
+
 router.route('/:userID/all-products').get(ProductController.getAllProductBySellerID);
 
 router.route('/wishlist').post(auth.verifyToken, ProductController.getWishList);
@@ -50,5 +52,9 @@ router.route('/get-value-detail').post(auth.verifyToken, auth.isSeller, ProductC
 router.route('/add-wishlist/:productId').post(auth.verifyToken, ProductController.addWishList);
 
 router.route('/review/:productId').post(auth.verifyToken, ProductController.reviewProduct);
+
+router.route('/delete-image/:imagePath').delete(auth.verifyToken, auth.isSeller, ProductController.deleteImage);
+
+router.route('/delete-video/:videoPath').delete(auth.verifyToken, auth.isSeller, ProductController.deleteVideo);
 
 module.exports = router;

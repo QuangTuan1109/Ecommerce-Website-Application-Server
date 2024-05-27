@@ -14,4 +14,8 @@ router.post('/signin', passport.authenticate('local', { session: false }), Login
 
 router.post('/signin-seller',auth.verifyToken, Login.SignInSeller);
 
+router.route('/upload-avt').post(Login.handleFileUpload, Login.handleUploadImage); 
+
+router.route('/delete-avt/:imagePath').delete(Login.deleteImage);
+
 module.exports = router;
