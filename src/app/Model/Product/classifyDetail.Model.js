@@ -11,7 +11,7 @@ const classifyDetailModel = new Schema({
         Value1: String,
         Option2: String,
         Value2: String,
-        Image: String,
+        Image: Array,
         Price: Number,
         Stock: Number,
         SKU: String

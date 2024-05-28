@@ -169,7 +169,12 @@ async function createNewProduct(req, res) {
             const prices = Classify.map(option => option.Price);
             const minPrice = Math.min(...prices);
             const maxPrice = Math.max(...prices);
-            productPrice = `${minPrice.toLocaleString()}đ - ${maxPrice.toLocaleString()}đ`;
+           
+            if (minPrice === maxPrice) {
+                productPrice = `${minPrice.toLocaleString()}đ`;
+            } else {
+                productPrice = `${minPrice.toLocaleString()}đ - ${maxPrice.toLocaleString()}đ`;
+            }
         }
 
         const newProduct = new Product({
@@ -205,8 +210,6 @@ async function createNewProduct(req, res) {
                 const foundValueDetails = await ValueDetail.findOne({
                     AttributeName: key
                 });
-
-                console.log(foundValueDetails)
 
                 if (!foundValueDetails.categoryPaths.includes(Category)) {
                     return res.status(404).json({ error: `${key} is not suitable for ${foundCategory.Name}` });
