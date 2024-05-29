@@ -10,6 +10,8 @@ router.route('/:ProductID/add-to-cart').post(auth.verifyToken, Cart.addToCart);
 
 router.route('/cart').get(auth.verifyToken, Cart.getCart)
 
+router.route('/cart/:productId').delete(auth.verifyToken, Cart.deleteProductInCart)
+
 router.route('/order-and-payment').post(auth.verifyToken, Cart.order);
 
 module.exports = router;

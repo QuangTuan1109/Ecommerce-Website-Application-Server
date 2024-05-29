@@ -112,6 +112,40 @@ async function getCart(req, res) {
         return res.status(500).json({ message: 'Internal server error' });
     }
 }
+async function deleteProductInCart(req, res) {
+    try {
+        const productID = req.params.productId;
+        const token = req.headers.authorization;
+        if (!token) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+        if (!decodedToken) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const customerID = decodedToken.sub;
+
+        if (!customerID || !productID) {
+            return res.status(400).json({ message: 'Customer ID and Product ID are required' });
+        }
+
+        const cart = await Cart.findOneAndDelete({
+            CustomerID: customerID,
+            ProductID: productID
+        });
+
+        if (!cart) {
+            return res.status(404).json({ message: 'Product not found in cart' });
+        }
+
+        return res.status(200).json({ message: 'Product removed from cart' });
+    } catch (error) {
+        console.error('Error in deleteProductInCart:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
 
 async function order(req, res) {
     try {
@@ -221,6 +255,7 @@ async function order(req, res) {
 
 module.exports = {
     addToCart,
+    deleteProductInCart,
     getCart,
     order
 };
