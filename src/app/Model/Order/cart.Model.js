@@ -14,7 +14,7 @@ const cartModel = new Schema({
         type: Object
     },
     Quantity: {
-        type: String
+        type: Number
     },
     TotalPrices: {
         type: Number

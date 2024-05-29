@@ -24,36 +24,62 @@ async function addToCart(req, res) {
         }
 
         const CustomerID = decodedToken.sub;
-
+        
         const classifyDetail = await ClassifyDetail.findOne({ ProductID: mongoose.Types.ObjectId(req.params.ProductID) });
-        if (!classifyDetail) {
-            return res.status(404).json({ message: 'Classify detail not found for the given product' });
+        
+        let selectedOption;
+        let price;
+
+        if (classifyDetail) {
+            if (req.body.Option1 && req.body.Option2) {
+                selectedOption = classifyDetail.Options.find(option =>
+                    option.Option1 === req.body.Option1 && option.Value1 === req.body.Value1 &&
+                    option.Option2 === req.body.Option2 && option.Value2 === req.body.Value2
+                );
+            } else {
+                selectedOption = classifyDetail.Options.find(option =>
+                    option.Option1 === req.body.Option1 && option.Value1 === req.body.Value1
+                );
+            }
+            if (selectedOption) {
+                price = selectedOption.Price * req.body.Quantity;
+            } else {
+                return res.status(400).json({ message: 'Selected option not found in ClassifyDetail' });
+            }
+        } else {
+            selectedOption = null
+            price = req.body.Price * req.body.Quantity;
         }
 
-        const selectedOption = classifyDetail.Options.find(option =>
-            option.Option1 === req.body.Option1 && option.Value1 === req.body.Value1 &&
-            option.Option2 === req.body.Option2 && option.Value2 === req.body.Value2
-        );
 
-        if (!selectedOption) {
-            return res.status(400).json({ message: 'Selected option not found in ClassifyDetail' });
-        }
-
-        const price = selectedOption.Price * req.body.Quantity;
-
-        const newCartItem = new Cart({
+        const existingCartItem = await Cart.findOne({
             CustomerID: CustomerID,
             ProductID: req.params.ProductID,
-            classifyDetail: selectedOption,
-            Quantity: req.body.Quantity,
-            TotalPrices: price,
-            CreateAt: Date.now(),
-            UpdateAt: Date.now()
+            'classifyDetail.Option1': req.body.Option1,
+            'classifyDetail.Value1': req.body.Value1,
+            ...(req.body.Option2 && { 'classifyDetail.Option2': req.body.Option2 }),
+            ...(req.body.Value2 && { 'classifyDetail.Value2': req.body.Value2 })
         });
 
-        await newCartItem.save();
+        if (existingCartItem) {
+            existingCartItem.Quantity += req.body.Quantity;
+            existingCartItem.TotalPrices = existingCartItem.Quantity * selectedOption.Price;
+            await existingCartItem.save();
 
-        return res.status(201).json({ message: 'Item added to cart successfully'});
+            return res.status(200).json({ message: 'Cart item updated successfully' });
+        } else {
+            const newCartItem = new Cart({
+                CustomerID: CustomerID,
+                ProductID: req.params.ProductID,
+                classifyDetail: selectedOption,
+                Quantity: req.body.Quantity,
+                TotalPrices: price,
+            });
+
+            await newCartItem.save();
+
+            return res.status(201).json({ message: 'Item added to cart successfully' });
+        }
     } catch (error) {
         console.error('Error in addToCart:', error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -80,7 +106,7 @@ async function getCart(req, res) {
             return res.status(404).json({ message: 'Cart is empty' });
         }
 
-        return res.status(200).json(cartItems);
+        return res.status(200).json({data: cartItems});
     } catch (error) {
         console.error('Error in getCart:', error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -122,42 +148,42 @@ async function order(req, res) {
                 option.Option1 === productItem.Option1 && option.Value1 === productItem.Value1 &&
                 option.Option2 === productItem.Option2 && option.Value2 === productItem.Value2
             );
-    
+
             if (!selectedOption) {
                 return res.status(400).json({ message: 'Selected option not found in ClassifyDetail' });
             }
-    
+
             price = selectedOption.Price * productItem.quantity;
             totalProductPrice += price;
         }
 
-       let voucher = null;
-       if (voucherCode) {
-           voucher = await Voucher.findOne({ code: voucherCode });
-           if (!voucher || !voucher.isValid) {
-               return res.status(400).json({ message: 'Invalid voucher' });
-           }
+        let voucher = null;
+        if (voucherCode) {
+            voucher = await Voucher.findOne({ code: voucherCode });
+            if (!voucher || !voucher.isValid) {
+                return res.status(400).json({ message: 'Invalid voucher' });
+            }
 
-           switch (voucher.target) {
-               case 'SingleProduct':
-                   if (!voucher.productId.equals(products[0]._id)) {
-                       return res.status(400).json({ message: 'Voucher is not applicable for this product' });
-                   }
-                   break;
-               case 'ProductCategory':
-                   const productCategories = products.map(productItem => productItem.categoryId);
+            switch (voucher.target) {
+                case 'SingleProduct':
+                    if (!voucher.productId.equals(products[0]._id)) {
+                        return res.status(400).json({ message: 'Voucher is not applicable for this product' });
+                    }
+                    break;
+                case 'ProductCategory':
+                    const productCategories = products.map(productItem => productItem.categoryId);
 
-                   if (!voucher.categoryIds.some(categoryId => productCategories.includes(categoryId))) {
-                       return res.status(400).json({ message: 'Voucher is not applicable for these products' });
-                   }
-                   break;
-               case 'MinOrderAmount':
-                   if (totalProductPrice < voucher.minOrderAmount) {
-                       return res.status(400).json({ message: 'Voucher cannot be applied. Minimum order amount not met' });
-                   }
-                   break;
-           }
-       }
+                    if (!voucher.categoryIds.some(categoryId => productCategories.includes(categoryId))) {
+                        return res.status(400).json({ message: 'Voucher is not applicable for these products' });
+                    }
+                    break;
+                case 'MinOrderAmount':
+                    if (totalProductPrice < voucher.minOrderAmount) {
+                        return res.status(400).json({ message: 'Voucher cannot be applied. Minimum order amount not met' });
+                    }
+                    break;
+            }
+        }
 
         const deliveryMethod = await DeliveryMethod.findOne({ name: req.body.deliveryMethod });
         const deliveryFee = deliveryMethod.deliveryFee;
@@ -170,7 +196,7 @@ async function order(req, res) {
         const newOrder = new Order({
             customer: customerId,
             products: [{
-                product: products._id, 
+                product: products._id,
                 classifyDetail: selectedOption,
                 quantity,
                 price

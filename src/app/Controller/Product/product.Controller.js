@@ -280,13 +280,21 @@ async function createDelivery(req, res) {
 
 async function getProductByCategory(req, res) {
     try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+
         const foundCategory = await Categories.findOne({ _id: req.params.categoryID });
         if (!foundCategory) {
             return res.status(404).json({ message: 'Category not found' });
         }
 
         const regex = new RegExp(`.*${foundCategory.Name}.*`);
-        const products = await Product.find({ Category: { $regex: regex } });
+        const products = await Product.find({ Category: { $regex: regex } })
+            .skip(skip)
+            .limit(limit);
+
+        const totalProducts = await Product.countDocuments({ Category: { $regex: regex } });
 
         const classify = await ClassifyDetail.find({ ProductID: products.map(product => product._id) });
         const discount = await DiscountModel.find({ ProductID: products.map(product => product._id) });
@@ -301,19 +309,21 @@ async function getProductByCategory(req, res) {
                 discount: productDiscount
             };
         });
-        
-        return res.status(200).json(productsWithDetails);
+
+        return res.status(200).json({ products: productsWithDetails, totalProducts: totalProducts });
     } catch (error) {
         console.error('Error in getProductByCategory:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
 }
 
+
 async function getProductByID(req, res) {
     try {
         const productId = req.params.productID;
 
-        const foundProduct = await Product.findById({_id: mongoose.Types.ObjectId(productId)});
+        const foundProduct = await Product.findById({_id: mongoose.Types.ObjectId(productId)}).populate('SellerID');
+
         if (!foundProduct) {
             return res.status(404).json({ message: 'Product not found' });
         }
