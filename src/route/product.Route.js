@@ -2,16 +2,16 @@ const express = require('express');
 const router = require('express-promise-router')();
 const passport = require('passport');
 
-require('../../config/db/passport');
-const auth = require('../../config/db/auth');
-const ProductController = require('../../app/Controller/Product/product.Controller');
+require('../config/db/passport');
+const auth = require('../config/db/auth');
+const ProductController = require('../app/Controller/product.Controller');
 
 
 router.route('/search').get(ProductController.searchProduct);
 
 router.route('/categories').get(ProductController.getCategory);
 
-router.route('/get-all-delivery').get( ProductController.getAllDelivery); 
+router.route('/get-all-delivery').get(ProductController.getAllDelivery);
 
 router.route('/categories/:ID').get(ProductController.getSubCategory);
 
@@ -25,11 +25,11 @@ router.route('/classify/:productID').get(auth.verifyToken, ProductController.get
 
 router.route('/wholesales/:productID').get(auth.verifyToken, ProductController.getWholesale);
 
-router.route('/create-new-delivery').post(auth.verifyToken, auth.isAdmin, ProductController.createDelivery); 
+router.route('/create-new-delivery').post(auth.verifyToken, auth.isAdmin, ProductController.createDelivery);
 
-router.route('/upload-video').post(auth.verifyToken, ProductController.handleFileUpload, ProductController.handleUploadVideo); 
+router.route('/upload-video').post(auth.verifyToken, ProductController.handleFileUpload, ProductController.handleUploadVideo);
 
-router.route('/upload-image').post(auth.verifyToken, ProductController.handleFileUpload, ProductController.handleUploadImage); 
+router.route('/upload-image').post(auth.verifyToken, ProductController.handleFileUpload, ProductController.handleUploadImage);
 
 router.route('/:userID/all-products').get(ProductController.getAllProductBySellerID);
 

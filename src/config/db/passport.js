@@ -7,7 +7,7 @@ const ExtractJwt = require('passport-jwt').ExtractJwt
 const bcrypt = require('bcryptjs')
 
 const { JWT_SECRET, Auth } = require('../index');
-const User = require('../../app/Model/User/user.Model')
+const User = require('../../app/Model/user.Model')
 
 //Passport JWT
 passport.use(new JwtStratery({

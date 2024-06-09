@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken')
 
-const User = require('../../app/Model/User/user.Model')
-const Roles = require('../../app/Model/User/role.Model')
+const User = require('../../app/Model/user.Model')
+const Roles = require('../../app/Model/role.Model')
 const { JWT_SECRET } = require('../index')
 
 verifyToken = (req, res, next) => {

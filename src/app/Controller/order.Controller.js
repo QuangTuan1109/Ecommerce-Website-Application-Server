@@ -2,15 +2,14 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose')
 
 
-const ClassifyDetail = require('../../Model/Product/classifyDetail.Model')
-const DeliveryMethod = require('../../Model/Product/Delivery.Model')
-const Product = require('../../Model/Product/products.Model')
-const Cart = require('../../Model/Order/cart.Model')
-const Order = require('../../Model/Order/order.Model')
-const Voucher = require('../../Model/Promotion/voucher.Model')
-const ShippingAddress = require('../../Model/Order/shippingInfor.Model')
-const CustomerModel = require('../../Model/User/customer.Model')
-const UserModel = require('../../Model/User/user.Model')
+const ClassifyDetail = require('../Model/classifyDetail.Model')
+const DeliveryMethod = require('../Model/Delivery.Model')
+const Product = require('../Model/products.Model')
+const Cart = require('../Model/cart.Model')
+const Order = require('../Model/order.Model')
+const Voucher = require('../Model/voucher.Model')
+const CustomerModel = require('../Model/customer.Model')
+const UserModel = require('../Model/user.Model')
 
 
 async function addToCart(req, res) {

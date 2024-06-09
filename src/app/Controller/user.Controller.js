@@ -1,10 +1,10 @@
-const User = require('../../Model/User/user.Model');
-const Customer = require('../../Model/User/customer.Model')
-const Seller = require('../../Model/User/seller.Model')
+const User = require('../Model/user.Model');
+const Customer = require('../Model/customer.Model')
+const Seller = require('../Model/seller.Model')
 const jwt = require('jsonwebtoken');
 // const db = require('../../Model')
 // const ROLES = db.ROLES;
-const Roles = require('../../Model/User/role.Model')
+const Roles = require('../Model/role.Model')
 const mongoose = require('mongoose')
 
 async function getUserInfor(req, res, next) {

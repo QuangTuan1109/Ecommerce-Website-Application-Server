@@ -5,18 +5,18 @@ const path = require('path');
 const mongoose = require('mongoose')
 const jwt = require('jsonwebtoken');
 
-const User = require('../../Model/User/user.Model')
-const Role = require('../../Model/User/role.Model')
-const Product = require('../../Model/Product/products.Model');
-const Categories = require('../../Model/Product/categories.Model');
-const Seller = require('../../Model/User/seller.Model');
-const ValueDetail = require('../../Model/Product/value.detail.model');
-const ClassifyDetail = require('../../Model/Product/classifyDetail.Model')
-const DiscountModel = require('../../Model/Product/Discount.Model');
-const customerModel = require('../../Model/User/customer.Model');
-const Review = require('../../Model/Product/review.Model')
-const Order = require('../../Model/Order/order.Model')
-const Delivery = require('../../Model/Product/Delivery.Model')
+const User = require('../Model/user.Model')
+const Role = require('../Model/role.Model')
+const Product = require('../Model/products.Model');
+const Categories = require('../Model/categories.Model');
+const Seller = require('../Model/seller.Model');
+const ValueDetail = require('../Model/value.detail.model');
+const ClassifyDetail = require('../Model/classifyDetail.Model')
+const DiscountModel = require('../Model/Discount.Model');
+const customerModel = require('../Model/customer.Model');
+const Review = require('../Model/review.Model')
+const Order = require('../Model/order.Model')
+const Delivery = require('../Model/Delivery.Model')
 
 const storage = new Storage({
     projectId: 'ecommerce-website-a69f9',
@@ -49,7 +49,6 @@ async function handleUploadVideo(req, res) {
 
     const videoFiles = req.files['Video'];
 
-    // Handle video upload
     const videoUrls = await Promise.all(videoFiles.map(async (videoFile) => {
         const videoName = uuidv4() + path.extname(videoFile.originalname);
         const videoFilePath = `videos/${videoName}`;
@@ -64,7 +63,6 @@ async function handleUploadVideo(req, res) {
 async function handleUploadImage(req, res) {
     const imageFiles = req.files['Image'];
 
-    // Handle image upload
     const imageUrls = await Promise.all(imageFiles.map(async (imageFile) => {
         const imageName = uuidv4() + path.extname(imageFile.originalname);
         const imagePath = `images/${imageName}`;
@@ -82,7 +80,7 @@ async function deleteFile(filePath) {
         console.log('File deleted successfully.');
     } catch (error) {
         console.error('Error deleting file:', error);
-        throw error; // Ném lỗi nếu có lỗi xảy ra để xử lý ở nơi gọi hàm
+        throw error;
     }
 }
 

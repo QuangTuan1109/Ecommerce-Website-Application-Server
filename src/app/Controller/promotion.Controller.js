@@ -5,73 +5,14 @@ const multer = require('multer');
 
 
 
-const User = require('../../Model/User/user.Model')
-const Product = require('../../Model/Product/products.Model')
-const Voucher = require('../../Model/Promotion/voucher.Model')
-const sellerModel = require('../../Model/User/seller.Model');
-const roleModel = require('../../Model/User/role.Model');
-const Admin = require('../../Model/User/admin.Model');
-const customerModel = require('../../Model/User/customer.Model');
-const ImageModel = require('../../Model/image')
-
-async function checkVoucherEligibility(customerId, productIds, voucherCode) {
-    const customer = await customerModel.findById(customerId).populate('Wishlist usageHistory.voucherId');
-    const voucher = await Voucher.findOne({ code: voucherCode });
-    if (!customer || !voucher) {
-        throw new Error('Invalid customer or voucher.');
-    }
-
-    // Tổng số tiền của các sản phẩm
-    const products = await Product.find({ _id: { $in: productIds } });
-    const totalAmount = products.reduce((acc, product) => acc + product.Price, 0);
-
-    // 1. Kiểm tra giá trị đơn hàng tối thiểu
-    if (totalAmount < voucher.minOrderAmount) {
-        return { eligible: false, message: 'Order amount is less than minimum order amount.' };
-    }
-
-    // 2. Kiểm tra số lần sử dụng tối đa của người dùng
-    const voucherUsage = customer.usageHistory.find(v => v.voucherId.toString() === voucher._id.toString());
-    if (voucherUsage && voucherUsage.currentUsage >= voucher.maxUsagePerUser) {
-        return { eligible: false, message: 'Voucher usage limit per user exceeded.' };
-    }
-
-    // 3. Kiểm tra thời hạn sử dụng
-    const now = new Date();
-    if (now < voucher.validFrom || now > voucher.validTo) {
-        return { eligible: false, message: 'Voucher is not valid at this time.' };
-    }
-
-    // 4. Kiểm tra typeCode
-    const usedTypeCodes = customer.usageHistory
-        .filter(uh => productIds.includes(uh.voucherId.toString()))
-        .map(uh => uh.voucherId.typeCode);
-    if (usedTypeCodes.includes(voucher.typeCode)) {
-        return { eligible: false, message: `Voucher of type ${voucher.typeCode} has already been used.` };
-    }
-
-    // 5. Kiểm tra tổng số lần sử dụng voucher
-    const totalUsage = await customerModel.countDocuments({ 'usageHistory.voucherId': voucher._id });
-    if (totalUsage >= voucher.maxTotalUsage) {
-        return { eligible: false, message: 'Voucher total usage limit exceeded.' };
-    }
-
-    // 6. Kiểm tra mục đích sử dụng
-    if (voucher.typeCode === 'voucher-new-customer' && customer.Wishlist.length > 0) {
-        return { eligible: false, message: 'Only new customers can use this voucher.' };
-    }
-
-    if (voucher.typeCode === 'voucher-old-customer' && customer.Wishlist.length < voucher.numOfPurchases) {
-        return { eligible: false, message: `Customers must have made at least ${voucher.numOfPurchases} purchases to use this voucher.` };
-    }
-
-    if (voucher.typeCode === 'voucher-follower' && !customer.Following.includes(voucher.createdBy)) {
-        return { eligible: false, message: 'Only followers can use this voucher.' };
-    }
-
-    return { eligible: true, message: 'Voucher is valid.' };
-}
-
+const User = require('../Model/user.Model')
+const Product = require('../Model/products.Model')
+const Voucher = require('../Model/voucher.Model')
+const sellerModel = require('../Model/seller.Model');
+const roleModel = require('../Model/role.Model');
+const Admin = require('../Model/admin.Model');
+const customerModel = require('../Model/customer.Model');
+const ImageModel = require('../Model/image')
   
 const createVoucher = async (req, res) => {
     try {
@@ -326,18 +267,17 @@ const deleteVoucher = async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
+
 const handleVoucher = async (req, res) => {
     try {
         const { voucherID } = req.params;
         const { action } = req.body;
 
-        // Verify if the voucher exists
         const voucher = await Voucher.findById(voucherID);
         if (!voucher) {
             return res.status(404).json({ message: 'Voucher not found' });
         }
 
-        // Verify the token and get the user
         const token = req.headers.authorization;
         const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
         if (!decodedToken) {
@@ -354,7 +294,6 @@ const handleVoucher = async (req, res) => {
             return res.status(404).json({ message: 'Forbidden: Only customers can use vouchers' });
         }
 
-        // Find the voucher in the customer's usage history
         let ownedVoucher = customer.usageHistory.find(entry => entry.voucherId.toString() === voucherID);
         
         if (action === 'use') {
@@ -377,7 +316,6 @@ const handleVoucher = async (req, res) => {
             return res.status(400).json({ message: 'Invalid action' });
         }
         
-        //console.log(customer)
         await customer.save();
         return res.status(200).json({ message: `Voucher ${action}d successfully` });
     } catch (error) {
