@@ -46,13 +46,15 @@ const isAdminOrSeller = async (req, res, next) => {
 };
 
 
-router.route('/add-voucher').post(auth.verifyToken, isAdminOrSeller, upload.single('image'), Promotion.createVoucher);
+router.route('/add-voucher').post(auth.verifyToken, isAdminOrSeller, Promotion.createVoucher);
 
 router.route('/admin-voucher').get(Promotion.getAllAdminVouchers)
 
-router.route('/folower-voucher').post(auth.verifyToken, Promotion.getAllSellerVouchersFollowedByCustomer);
+router.route('/get-voucher-seller/:sellerId').get(Promotion.getVoucherBySeller)
 
-router.route('/own-voucher').post(auth.verifyToken, Promotion.getCustomerVouchers);
+router.route('/seller-voucher').get(auth.verifyToken, auth.isSeller, Promotion.getAllSellerVouchers)
+
+router.route('/folower-voucher').post(auth.verifyToken, Promotion.getAllSellerVouchersFollowedByCustomer);
 
 router.route('/own-voucher').post(auth.verifyToken, Promotion.getCustomerVouchers);
 
@@ -60,6 +62,6 @@ router.route('/:voucherID/update').patch(auth.verifyToken, isAdminOrSeller, Prom
 
 router.route('/:voucherID/delete').delete(auth.verifyToken, isAdminOrSeller, Promotion.deleteVoucher)
 
-router.route('/:voucherID/use-voucher').post(auth.verifyToken, Promotion.useVoucher)
+router.route('/:voucherID/use-voucher').post(auth.verifyToken, Promotion.handleVoucher)
 
 module.exports = router;

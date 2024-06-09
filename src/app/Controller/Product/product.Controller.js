@@ -164,17 +164,23 @@ async function createNewProduct(req, res) {
         }
         
         let productPrice;
+        let totalStock = 0;
 
         if (Classify && Classify.length > 0) {
             const prices = Classify.map(option => option.Price);
             const minPrice = Math.min(...prices);
             const maxPrice = Math.max(...prices);
-           
+            
+            totalStock = Classify.reduce((accumulator, option) => accumulator + option.Stock, 0);
+
             if (minPrice === maxPrice) {
                 productPrice = `${minPrice.toLocaleString()}đ`;
             } else {
                 productPrice = `${minPrice.toLocaleString()}đ - ${maxPrice.toLocaleString()}đ`;
             }
+        } else {
+            productPrice = Price,
+            totalStock = Quantity
         }
 
         const newProduct = new Product({
@@ -191,9 +197,8 @@ async function createNewProduct(req, res) {
             preOrderGoods,
             SKU,
             Status,
-            Price,
-            PriceRange: productPrice, 
-            Quantity,
+            Price: productPrice, 
+            Quantity: totalStock,
             Image,
             preparationTime,
             Video,

@@ -19,11 +19,11 @@ const cartModel = new Schema({
     TotalPrices: {
         type: Number
     },
-    Voucher: {
+    Voucher: [{
         type: Schema.Types.ObjectId,
         ref: 'Voucher',
         default: null
-    },
+    }],
 }, { timestamps: true });
 
 module.exports = mongoose.model('Cart', cartModel);

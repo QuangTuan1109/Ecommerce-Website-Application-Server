@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 // const db = require('../../Model')
 // const ROLES = db.ROLES;
 const Roles = require('../../Model/User/role.Model')
+const mongoose = require('mongoose')
 
 async function getUserInfor(req, res, next) {
     try {
@@ -19,16 +20,16 @@ async function getUserInfor(req, res, next) {
         }
 
         const userId = decodedToken.sub
-        const user = await User.findById(userId)
+        const user = await User.findById(mongoose.Types.ObjectId(userId))
         .populate('activeRole')
         .populate('CustomerID')
         .populate('SellerID')
-
+        
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        res.status(200).json({user: user})
+       return res.status(200).json({user: user})
     } catch (error) {
         return next(error);
     }

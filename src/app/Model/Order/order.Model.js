@@ -23,44 +23,106 @@ const orderSchema = new Schema({
         price: {
             type: Number,
             required: true
+        },
+        message: String,
+        voucherShop: [{
+            type: Schema.Types.ObjectId,
+            ref: 'Voucher',
+            default: null
+        }],  
+        deliveryMethod: {
+            type: String,
+            required: true,
+            default: null
+        },
+        deliveryFee: {
+            type: Number,
+            required: true
+        },
+        productStatus: {
+            type: String,
+            enum: ['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Completed', 'Cancelled', 'Return/Refund', 'Delivery failed'],
+            default: 'Pending'
+        },
+        returnRequest: {
+            type: Boolean,
+            default: false
+        },
+        returnReason: {
+            type: String,
+            default: ''
+        },
+        returnStatus: {
+            type: String,
+            enum: [null, 'Pending', 'Approved', 'Rejected'],
+            default: null
+        },
+        returnOrderStatus: {
+            type: String,
+            enum: [null, 'Pending', 'Confirmed', 'Shipped', 'Delivered', 'Completed', 'Failed'],
+            default: null
+        },
+        returnRequestedBy: {
+            type: String,
+            enum: [null, 'customer', 'seller', 'admin'],
+            default: null
+        },
+        confirmationTime: {
+            type: Date
         }
     }],
-    totalProductPrice: {
-        type: Number,
-        required: true
-    },
-    voucher: {
+    voucherSystem: [{
         type: Schema.Types.ObjectId,
         ref: 'Voucher',
         default: null
-    },  
-    deliveryMethod: {
-        type: Schema.Types.ObjectId,
-        ref: 'Delivery',
-        default: null
-    },
-    deliveryFee: {
-        type: Number,
-        required: true
-    },
+    }],
     totalAmount: {
         type: Number,
         required: true
     },
-    message: String,
     orderStatus: {
         type: String,
-        enum: ['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'],
+        enum: ['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Completed', 'Cancelled', 'Return/Refund', 'Partial Return/Refund', 'Delivery failed'],
         default: 'Pending'
     },
+    recipName: {
+        type: String,
+        required: true
+    },
     shippingAddress: {
-        type: Schema.Types.ObjectId,
-        ref: 'shippingAddressSchema'
+        type: String,
+        required: true
+    },
+    phone: {
+        type: String,
+        required: true
     },
     paymentMethod: {
-        type: Schema.Types.ObjectId,
-        ref: 'paymentMethodSchema'
+        type: String,
+        required: true
     },
-}, { timestamps: true });
+    bankTransferImage: [
+        {
+            type: String
+        }
+    ],
+    cancelRequest: {
+        type: Boolean,
+        default: false
+    },
+    cancelledBy: {
+        type: String,
+        enum: [null, 'customer', 'seller', 'admin'],
+        default: null
+    },
+    createdDate: {
+        type: Date,
+        default: Date.now
+    },
+    updated: {
+        type: Date,
+        default: Date.now
+    }
+});
 
 module.exports = mongoose.model('Order', orderSchema);

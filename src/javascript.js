@@ -6,6 +6,7 @@ const loginRoutes = require('./route/User/login.Route');
 const productRoutes = require('./route/Product/product.Route');
 const orderRoutes = require('./route/Order/order.Route');
 const promotionRoutes = require('./route/Promotion/promotion.Route');
+const imageRoutes = require('./route/imageRoute')
 const cors = require('cors');
 
 // Connect to MongoDB database
@@ -35,6 +36,7 @@ app.use('/api/v1', loginRoutes);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/order', orderRoutes);
 app.use('/api/v1/promotion', promotionRoutes);
+app.use('/api/v1/image', imageRoutes)
 
 // Handle 404 errors
 app.use((req, res, next) => {

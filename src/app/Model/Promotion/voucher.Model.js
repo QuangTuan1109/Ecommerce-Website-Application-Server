@@ -5,6 +5,16 @@ const voucherSchema = new Schema ({
     image: {
         type: String
     },
+    typeCode: {
+        type: String,
+        enum: ['voucher-shop', 'voucher-product', 'voucher-new-customer', 'voucher-old-customer', 'voucher-follower'],
+        required: true,
+    },
+    nameVoucher: {
+        type: String,
+        required: true,
+        unique: true
+    },
     code: {
         type: String,
         required: true,
@@ -30,12 +40,18 @@ const voucherSchema = new Schema ({
     },
     discountType: {
         type: String,
-        enum: ['percentage', 'fixed'],
+        enum: ['percentage', 'amount'],
         required: true
+    },
+    numOfPurchases: {
+        type: Number,
     },
     discountValue: {
         type: Number,
         required: true
+    },
+    maxReduction: {
+        type: Number,
     },
     maxUsagePerUser: {
         type: Number,
@@ -46,10 +62,10 @@ const voucherSchema = new Schema ({
         required: true,
         default: 0
     },
-    target: {
-        type: String,
-        enum: ['SpecificProduct', 'ProductCategory', 'MinOrderAmount', 'AllProducts'],
-        required: true
+    maxTotalUsage: {
+        type: Number,
+        required: true,
+        default: 0
     },
     productId: [
         {
@@ -57,10 +73,11 @@ const voucherSchema = new Schema ({
             ref: 'productModel'
         }
     ],
-    categoryId: {
-        type: Schema.Types.ObjectId,
-        ref: 'Category'
-    },
+    status: {
+        type: String,
+        enum: ['Active', 'Disabled'],
+        required: true
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Voucher', voucherSchema);
