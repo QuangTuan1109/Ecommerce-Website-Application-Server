@@ -1,22 +1,47 @@
-const { v4: uuidv4 } = require('uuid');
-const { Storage } = require('@google-cloud/storage');
-const multer = require('multer');
-const path = require('path');
-const mongoose = require('mongoose')
-const jwt = require('jsonwebtoken');
+import dotenv from 'dotenv';
+dotenv.config();
+import { v4 as uuidv4 } from 'uuid';
+import { Storage } from '@google-cloud/storage';
+import multer from 'multer';
+import path from 'path';
+import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
+import fetch from 'node-fetch';
 
-const User = require('../Model/user.Model')
-const Role = require('../Model/role.Model')
-const Product = require('../Model/products.Model');
-const Categories = require('../Model/categories.Model');
-const Seller = require('../Model/seller.Model');
-const ValueDetail = require('../Model/value.detail.model');
-const ClassifyDetail = require('../Model/classifyDetail.Model')
-const DiscountModel = require('../Model/Discount.Model');
-const customerModel = require('../Model/customer.Model');
-const Review = require('../Model/review.Model')
-const Order = require('../Model/order.Model')
-const Delivery = require('../Model/Delivery.Model')
+import User from '../Model/user.Model.js';
+import Role from '../Model/role.Model.js';
+import productModel from '../Model/products.Model.js';
+import Categories from '../Model/categories.Model.js';
+import searchHistoryModel from '../Model/searchHistory.js';
+import Seller from '../Model/seller.Model.js';
+import ValueDetail from '../Model/value.detail.model.js';
+import ClassifyDetail from '../Model/classifyDetail.Model.js';
+import DiscountModel from '../Model/Discount.Model.js';
+import Customer from '../Model/customer.Model.js';
+import Review from '../Model/review.Model.js';
+import Order from '../Model/order.Model.js';
+import Delivery from '../Model/Delivery.Model.js';
+
+import { preprocessData } from '../../ai/pre-processing/preProcessData.js'
+import { trainModel, recommendProducts } from '../../ai/model/productRecommendModel.js'
+
+async function getEmbedding(text, productTexts) {
+    const requestData = {
+        source_sentence: text,
+        sentences: productTexts
+    };
+
+    const response = await fetch('https://api-inference.huggingface.co/models/sentence-transformers/bert-base-nli-mean-tokens', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${process.env.HUGGING_FACE_TOKEN}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+    });
+    const data = await response.json();
+    return data
+}
 
 const storage = new Storage({
     projectId: 'ecommerce-website-a69f9',
@@ -56,7 +81,7 @@ async function handleUploadVideo(req, res) {
         return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(videoFilePath)}?alt=media`;
     }));
 
-    return res.status(200).json({ data: videoUrls});
+    return res.status(200).json({ data: videoUrls });
 
 }
 
@@ -70,7 +95,7 @@ async function handleUploadImage(req, res) {
         return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(imagePath)}?alt=media`;
     }));
 
-    return res.status(200).json({ data: imageUrls});
+    return res.status(200).json({ data: imageUrls });
 
 }
 
@@ -160,7 +185,7 @@ async function createNewProduct(req, res) {
             }
             parentCategory = foundCategory;
         }
-        
+
         let productPrice;
         let totalStock = 0;
 
@@ -168,7 +193,7 @@ async function createNewProduct(req, res) {
             const prices = Classify.map(option => option.Price);
             const minPrice = Math.min(...prices);
             const maxPrice = Math.max(...prices);
-            
+
             totalStock = Classify.reduce((accumulator, option) => accumulator + option.Stock, 0);
 
             if (minPrice === maxPrice) {
@@ -178,10 +203,10 @@ async function createNewProduct(req, res) {
             }
         } else {
             productPrice = Price,
-            totalStock = Quantity
+                totalStock = Quantity
         }
 
-        const newProduct = new Product({
+        const newProduct = new productModel({
             SellerID: foundSeller._id,
             Name,
             Description,
@@ -195,7 +220,8 @@ async function createNewProduct(req, res) {
             preOrderGoods,
             SKU,
             Status,
-            Price: productPrice, 
+            PriceRange: productPrice,
+            Price,
             Quantity: totalStock,
             Image,
             preparationTime,
@@ -203,7 +229,7 @@ async function createNewProduct(req, res) {
             Rating: 0,
             Like: 0,
         });
-        
+
         await newProduct.save();
 
         if (Detail) {
@@ -256,7 +282,7 @@ async function getAllDelivery(req, res) {
 
 async function createDelivery(req, res) {
     try {
-        const { deliveryMethod, deliveryFees,weightLimit, sizeLimit } = req.body;
+        const { deliveryMethod, deliveryFees, weightLimit, sizeLimit } = req.body;
 
         // Check if required fields are provided
         if (!deliveryMethod || !deliveryFees) {
@@ -293,11 +319,11 @@ async function getProductByCategory(req, res) {
         }
 
         const regex = new RegExp(`.*${foundCategory.Name}.*`);
-        const products = await Product.find({ Category: { $regex: regex } })
+        const products = await productModel.find({ Category: { $regex: regex } })
             .skip(skip)
             .limit(limit);
 
-        const totalProducts = await Product.countDocuments({ Category: { $regex: regex } });
+        const totalProducts = await productModel.countDocuments({ Category: { $regex: regex } });
 
         const classify = await ClassifyDetail.find({ ProductID: products.map(product => product._id) });
         const discount = await DiscountModel.find({ ProductID: products.map(product => product._id) });
@@ -320,12 +346,11 @@ async function getProductByCategory(req, res) {
     }
 }
 
-
 async function getProductByID(req, res) {
     try {
         const productId = req.params.productID;
 
-        const foundProduct = await Product.findById({_id: mongoose.Types.ObjectId(productId)}).populate('SellerID');
+        const foundProduct = await productModel.findById({ _id: mongoose.Types.ObjectId(productId) }).populate('SellerID');
 
         if (!foundProduct) {
             return res.status(404).json({ message: 'Product not found' });
@@ -349,16 +374,16 @@ async function getProductByID(req, res) {
 
 async function getAllProductBySellerID(req, res) {
     try {
-        const foundUser= await User.findOne({ _id:  req.params.userID })
+        const foundUser = await User.findOne({ _id: req.params.userID })
 
         if (foundUser) {
-            const sellerProducts = await Product.find({ SellerID: foundUser.SellerID });
+            const sellerProducts = await productModel.find({ SellerID: foundUser.SellerID });
             const products = [];
-            
-            for (var i = 0; i < sellerProducts.length; i++ ) {
+
+            for (var i = 0; i < sellerProducts.length; i++) {
                 const product = sellerProducts[i];
-                const getClassify = await ClassifyDetail.findOne({ProductID: product._id})
-                
+                const getClassify = await ClassifyDetail.findOne({ ProductID: product._id })
+
                 if (getClassify) {
                     const productWithClassify = {
                         ...product.toObject(),
@@ -369,7 +394,7 @@ async function getAllProductBySellerID(req, res) {
                     products.push(product.toObject());
                 }
             }
-            return res.status(200).json({data: products});
+            return res.status(200).json({ data: products });
         }
     } catch (error) {
         console.error('Error in getAllProductBySellerID:', error);
@@ -386,7 +411,7 @@ async function updateProduct(req, res) {
         const { Classify: classifyData, Discount: discountData, ...productUpdates } = updatedFields;
 
         // Update the product itself without Classify and Discount
-        const product = await Product.findByIdAndUpdate(productID, { ...productUpdates, updatedAt: Date.now() }, { new: true });
+        const product = await productModel.findByIdAndUpdate(productID, { ...productUpdates, updatedAt: Date.now() }, { new: true });
 
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
@@ -395,51 +420,55 @@ async function updateProduct(req, res) {
         // Check and update Classify if exists
         const classifyRecord = await ClassifyDetail.findOne({ ProductID: mongoose.Types.ObjectId(productID) });
 
-            if (classifyRecord) {
-                if (classifyData) {
-                    await ClassifyDetail.findByIdAndUpdate(
-                        classifyRecord._id,
-                        { $set: {
+        if (classifyRecord) {
+            if (classifyData) {
+                await ClassifyDetail.findByIdAndUpdate(
+                    classifyRecord._id,
+                    {
+                        $set: {
                             Options: classifyData,
-                            updatedAt: Date.now() 
-                        } },
-                        { new: true }
-                    );
-                } else {
-                    await ClassifyDetail.findByIdAndDelete(classifyRecord._id);
-                }
+                            updatedAt: Date.now()
+                        }
+                    },
+                    { new: true }
+                );
             } else {
-                if (classifyData) {
-                    await ClassifyDetail.create({
-                        ProductID: mongoose.Types.ObjectId(productID),
-                        Options: [...classifyData]
-                    });
-                }
+                await ClassifyDetail.findByIdAndDelete(classifyRecord._id);
             }
+        } else {
+            if (classifyData) {
+                await ClassifyDetail.create({
+                    ProductID: mongoose.Types.ObjectId(productID),
+                    Options: [...classifyData]
+                });
+            }
+        }
 
         // Check and update Discount if exists
         const discountRecord = await DiscountModel.findOne({ ProductID: mongoose.Types.ObjectId(productID) });
-            if (discountRecord) {
-                if (discountData) {
-                    await DiscountModel.findByIdAndUpdate(
-                        discountRecord._id,
-                        { $set: {
-                            Value: discountData, 
-                            updatedAt: Date.now() 
-                        } },
-                        { new: true }
-                    );
-                } else {
-                    await DiscountModel.findByIdAndDelete(discountRecord._id);
-                }
+        if (discountRecord) {
+            if (discountData) {
+                await DiscountModel.findByIdAndUpdate(
+                    discountRecord._id,
+                    {
+                        $set: {
+                            Value: discountData,
+                            updatedAt: Date.now()
+                        }
+                    },
+                    { new: true }
+                );
             } else {
-                if (discountData) {
-                    await DiscountModel.create({
-                        ProductID: mongoose.Types.ObjectId(productID),
-                        Value: [...discountData]
-                    });
-                }
+                await DiscountModel.findByIdAndDelete(discountRecord._id);
             }
+        } else {
+            if (discountData) {
+                await DiscountModel.create({
+                    ProductID: mongoose.Types.ObjectId(productID),
+                    Value: [...discountData]
+                });
+            }
+        }
 
         return res.status(200).json({ message: 'Product updated successfully', product });
     } catch (error) {
@@ -463,7 +492,7 @@ async function deleteProduct(req, res) {
             await DiscountModel.findByIdAndDelete(discountRecord._id);
         }
 
-        const deletedProduct = await Product.findByIdAndDelete(productID);
+        const deletedProduct = await productModel.findByIdAndDelete(productID);
 
         if (!deletedProduct) {
             return res.status(404).json({ message: 'Product not found' });
@@ -481,7 +510,7 @@ async function createNewCategory(req, res) {
         let { ParentCategoryID, Name } = req.body;
 
         if (ParentCategoryID) {
-            const parentCategory = await Categories.findOne({Name: ParentCategoryID});
+            const parentCategory = await Categories.findOne({ Name: ParentCategoryID });
             if (!parentCategory) {
                 return res.status(403).json({ error: 'Parent category does not exist' });
             }
@@ -567,13 +596,13 @@ async function deleteCategory(req, res) {
 
 async function getSubCategory(req, res) {
     try {
-        const subCategories = await Categories.find({ParentCategoryID: mongoose.Types.ObjectId(req.params.ID)});
+        const subCategories = await Categories.find({ ParentCategoryID: mongoose.Types.ObjectId(req.params.ID) });
 
         if (!subCategories || subCategories.length === 0) {
             return res.status(404).json({ message: 'No subcategories found' });
         }
 
-        return res.status(200).json({data: subCategories});
+        return res.status(200).json({ data: subCategories });
     } catch (error) {
         console.error('Error in getSubCategory:', error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -667,33 +696,7 @@ async function getValueDetail(req, res) {
         return res.status(500).json({ error: 'Internal server error' });
     }
 }
-async function searchProduct(req, res) {
-    try {
-        const { name, category, minPrice, maxPrice } = req.query;
-        let query = {};
 
-        if (name) {
-            query.Name = { $regex: name, $options: 'i' }; // Tìm kiếm theo tên sản phẩm, không phân biệt chữ hoa chữ thường
-        }
-        if (category) {
-            query.Category = { $regex: category, $options: 'i' }; // Tìm kiếm theo loại sản phẩm, không phân biệt chữ hoa chữ thường
-        }
-        if (minPrice && maxPrice) {
-            query.Price = { $gte: minPrice, $lte: maxPrice }; // Tìm kiếm theo giá sản phẩm nằm trong khoảng từ minPrice đến maxPrice
-        } else if (minPrice) {
-            query.Price = { $gte: minPrice }; // Tìm kiếm theo giá sản phẩm lớn hơn hoặc bằng minPrice
-        } else if (maxPrice) {
-            query.Price = { $lte: maxPrice }; // Tìm kiếm theo giá sản phẩm nhỏ hơn hoặc bằng maxPrice
-        }
-
-        const products = await Product.find(query);
-
-        return res.status(200).json(products);
-    } catch (error) {
-        console.error('Error in searchProduct:', error);
-        return res.status(500).json({ message: 'Internal server error' });
-    }
-}
 async function addWishList(req, res) {
     try {
         const productId = req.params.productId;
@@ -708,12 +711,12 @@ async function addWishList(req, res) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const customer = await customerModel.findById(mongoose.Types.ObjectId(user.customerID));
+        const customer = await Customer.findById(mongoose.Types.ObjectId(user.customerID));
         if (!customer) {
             return res.status(404).json({ message: 'Customer not found' });
         }
 
-        const product = await Product.findById(productId);
+        const product = await productModel.findById(productId);
 
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
@@ -749,7 +752,7 @@ async function getWishList(req, res) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const customer = await customerModel.findById(mongoose.Types.ObjectId(user.customerID));
+        const customer = await Customer.findById(mongoose.Types.ObjectId(user.customerID));
         if (!customer) {
             return res.status(404).json({ message: 'Customer not found' });
         }
@@ -809,7 +812,121 @@ async function reviewProduct(req, res) {
     }
 }
 
-module.exports = {
+async function searchProduct(req, res) {
+    const query = req.query.q;
+
+    try {
+        const token = req.headers.authorization;
+        if (!token) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+        if (!decodedToken) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const userID = decodedToken.sub;
+        const foundUser = await User.findById(userID);
+        if (!foundUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const foundCustomer = await Customer.findOne({ _id: mongoose.Types.ObjectId(foundUser.CustomerID) });
+
+        const foundSearchHistoryCustomer = await searchHistoryModel.findOne({ customerId: foundCustomer._id })
+
+        if (foundSearchHistoryCustomer) {
+            foundSearchHistoryCustomer.keywords.push(query);
+            await foundSearchHistoryCustomer.save();
+        } else {
+            const newSearchHistory = new searchHistoryModel({
+                customerId: foundCustomer._id,
+                keywords: [query]
+            });
+            await newSearchHistory.save();
+        }
+
+        const products = await productModel.find();
+
+        const productTexts = products.map((product) => `${product.Name} ${product.Description}`);
+
+        const embeddings = await getEmbedding(query, productTexts);
+
+        const similarities = products.map((product, index) => ({
+            product,
+            similarity: embeddings[index]
+        }));
+
+        similarities.sort((a, b) => b.similarity - a.similarity);
+
+        const mostSimilarProducts = similarities.slice(0, 2).map(item => item.product);
+
+        res.json(mostSimilarProducts);
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+}
+
+async function recommendationProduct(req, res) {
+    try {
+        const token = req.headers.authorization;
+        if (!token) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+        if (!decodedToken) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const userID = decodedToken.sub;
+        const foundUser = await User.findById(userID);
+        if (!foundUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const foundCustomer = await Customer.findOne({ _id: mongoose.Types.ObjectId(foundUser.CustomerID) });
+
+        const orders = await Order.find({ customer: foundCustomer._id })
+            .populate('products.product')
+            .select('products.product')
+            .sort({ createdDate: -1 })
+            .limit(5);
+
+        const orderProducts = orders.flatMap(order => {
+            return order.products.map(product => {
+                return product.product.Name;
+            });
+        });
+
+        const searchHistory = await searchHistoryModel.findOne({ customerId: foundCustomer._id })
+            .select('keywords')
+            .slice('keywords', -10);
+
+        const products = await productModel.find();
+
+        const { input, output } = preprocessData(searchHistory, orderProducts, products);
+
+        const knn = await trainModel(input, output);
+
+        const userInput = preprocessData(searchHistory, orderProducts, products).input;
+
+        const recommendations = recommendProducts(knn, userInput);
+
+        const uniqueRecommendations = Array.from(new Set(recommendations));
+
+        const recommendedProducts = uniqueRecommendations.map(index => products[index]);
+
+        res.json(recommendedProducts);
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+export default {
     handleFileUpload,
     handleUploadImage,
     handleUploadVideo,
@@ -835,5 +952,6 @@ module.exports = {
     getAllDelivery,
     createDelivery,
     getClassify,
-    getWholesale
+    getWholesale,
+    recommendationProduct
 };

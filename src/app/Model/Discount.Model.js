@@ -1,5 +1,6 @@
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
+import mongoose from 'mongoose';
+
+const { Schema, model } = mongoose;
 
 const DiscountModel = new Schema({
     ProductID: {
@@ -19,4 +20,4 @@ const DiscountModel = new Schema({
     }],
 }, { timestamps: true });
 
-module.exports = mongoose.model('DiscountModel', DiscountModel);
+export default mongoose.model('DiscountModel', DiscountModel);

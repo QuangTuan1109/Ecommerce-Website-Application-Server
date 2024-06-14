@@ -1,5 +1,6 @@
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
+import mongoose from 'mongoose';
+
+const { Schema } = mongoose;
 
 const voucherSchema = new Schema ({
     image: {
@@ -80,4 +81,4 @@ const voucherSchema = new Schema ({
     }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Voucher', voucherSchema);
+export default mongoose.model('Voucher', voucherSchema);

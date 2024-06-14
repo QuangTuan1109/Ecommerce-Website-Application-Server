@@ -1,48 +1,49 @@
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
+import mongoose from 'mongoose';
 
-const customerSchema = new Schema ({
-    Fullname : {
+const { Schema, model } = mongoose;
+
+const customerSchema = new Schema({
+    Fullname: {
         type: String,
         maxlength: 30,
         required: true
     },
-    Image : {
+    Image: {
         type: String
     },
-    Address : {
+    Address: {
         type: String
     },
-    Phone : {
+    Phone: {
         type: String,
         unique: true,
         required: true
     },
-    DOB : {
+    DOB: {
         type: Date,
-        require: true
+        required: true
     },
-    Sex : {
+    Sex: {
         type: String,
-        require: true
+        required: true
     },
-    Nation : {
-        type: String,
-    },
-    ProvinceOrCity : {
+    Nation: {
         type: String,
     },
-    Following : [{
+    ProvinceOrCity: {
+        type: String,
+    },
+    Following: [{
         type: Schema.Types.ObjectId,
         ref: 'User'
     }],
-    Follower : [{
+    Follower: [{
         type: Schema.Types.ObjectId,
         ref: 'User'
     }],
     Wishlist: [{
         type: Schema.Types.ObjectId,
-        ref: 'Product'
+        ref: 'productModel'
     }],
     usageHistory: [{
         voucherId: {
@@ -56,4 +57,4 @@ const customerSchema = new Schema ({
     }],
 }, { timestamps: true });
 
-module.exports = mongoose.model('Customer', customerSchema);
+export default mongoose.model('Customer', customerSchema);

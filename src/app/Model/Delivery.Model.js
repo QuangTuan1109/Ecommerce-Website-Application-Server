@@ -1,5 +1,6 @@
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
+import mongoose from 'mongoose';
+
+const { Schema, model } = mongoose;
 
 const deliveryModel = new Schema({
     deliveryMethod: {
@@ -11,13 +12,13 @@ const deliveryModel = new Schema({
         of: Number
     },
     weightLimit: {
-        type: Number // Giới hạn trọng lượng cân nặng
+        type: Number
     },
     sizeLimit: {
-        width: { type: Number }, // Giới hạn chiều rộng
-        length: { type: Number }, // Giới hạn chiều dài
-        height: { type: Number } // Giới hạn chiều cao
+        width: { type: Number },
+        length: { type: Number },
+        height: { type: Number }
     },
 }, { timestamps: true });
 
-module.exports = mongoose.model('deliveryModel', deliveryModel);
+export default mongoose.model('Delivery', deliveryModel);

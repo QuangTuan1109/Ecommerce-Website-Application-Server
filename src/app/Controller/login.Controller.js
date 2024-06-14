@@ -1,21 +1,15 @@
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const {
-    v4: uuidv4
-} = require('uuid');
-const {
-    Storage
-} = require('@google-cloud/storage');
-const multer = require('multer');
-const path = require('path');
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
+import { Storage } from '@google-cloud/storage';
+import multer from 'multer';
+import path from 'path';
 
-const User = require('../Model/user.Model');
-const Seller = require('../Model/seller.Model');
-const Customer = require('../Model/customer.Model');
-const RoleModel = require('../Model/role.Model');
-const {
-    JWT_SECRET
-} = require('../../config/index');
+import User from '../Model/user.Model.js';
+import Seller from '../Model/seller.Model.js';
+import Customer from '../Model/customer.Model.js';
+import Role from '../Model/role.Model.js';
+import { JWT_SECRET } from '../../config/index.js';
 
 const storage = new Storage({
     projectId: 'ecommerce-website-a69f9',
@@ -157,7 +151,7 @@ async function SignUp(req, res, next) {
         await newUser.save();
         await customer.save();
 
-        const role = await RoleModel.findOne({
+        const role = await Role.findOne({
             name: 'customer'
         });
         newUser.Role.push(role._id);
@@ -184,10 +178,10 @@ async function SignIn(req, res, next) {
             });
         }
 
-        const roleSeller = await RoleModel.findOne({
+        const roleSeller = await Role.findOne({
             name: 'seller'
         });
-        const roleCustomer = await RoleModel.findOne({
+        const roleCustomer = await Role.findOne({
             name: 'customer'
         });
 
@@ -218,7 +212,7 @@ async function SignUpSeller(req, res, next) {
     } = req.body;
 
     try {
-        const role = await RoleModel.findOne({
+        const role = await Role.findOne({
             name: 'seller'
         });
         if (!role) {
@@ -276,7 +270,7 @@ async function SignInSeller(req, res, next) {
 
         const customerId = decodedToken.sub;
         const user = await User.findById(customerId);
-        const roleSeller = await RoleModel.findOne({
+        const roleSeller = await Role.findOne({
             name: 'seller'
         });
 
@@ -303,7 +297,8 @@ async function SignInSeller(req, res, next) {
     }
 }
 
-module.exports = {
+
+export default {
     deleteImage,
     handleUploadImage,
     handleFileUpload,

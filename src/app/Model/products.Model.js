@@ -1,5 +1,5 @@
-const mongoose = require('mongoose')
-const Schema = mongoose.Schema
+import mongoose from 'mongoose';
+const { Schema } = mongoose;
 
 const productModel = new Schema({
     SellerID: {
@@ -25,8 +25,8 @@ const productModel = new Schema({
         }
     ],
     Video: {
-            type: String,
-            required: true
+        type: String,
+        required: true
     },
     Category: {
         type: String,
@@ -91,7 +91,10 @@ const productModel = new Schema({
     DiscountValue: {
         type: Number,
         default: 0
+    },
+    Quality: {
+        type: String
     }
 }, { timestamps: true });
 
-module.exports = mongoose.model('productModel', productModel)
+export default mongoose.model('productModel', productModel);

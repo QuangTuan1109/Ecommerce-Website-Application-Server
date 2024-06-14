@@ -1,11 +1,10 @@
-const express = require('express');
-const router = require('express-promise-router')();
-const passport = require('passport');
+import express from 'express';
+import passport from 'passport';
+import '../config/db/passport.js'; // Đảm bảo đường dẫn đúng và phần mở rộng `.js`
+import { verifyToken, isAdmin, isSeller } from '../config/db/auth.js'; // Đảm bảo đường dẫn đúng và phần mở rộng `.js`
+import ProductController from '../app/Controller/product.Controller.js'; // Đảm bảo đường dẫn đúng và phần mở rộng `.js`
 
-require('../config/db/passport');
-const auth = require('../config/db/auth');
-const ProductController = require('../app/Controller/product.Controller');
-
+const router = express.Router();
 
 router.route('/search').get(ProductController.searchProduct);
 
@@ -15,46 +14,50 @@ router.route('/get-all-delivery').get(ProductController.getAllDelivery);
 
 router.route('/categories/:ID').get(ProductController.getSubCategory);
 
-router.route('/categories/subcategories/:id').get(ProductController.getAllSubCategory)
+router.route('/categories/subcategories/:id').get(ProductController.getAllSubCategory);
 
 router.route('/:categoryID').get(ProductController.getProductByCategory);
 
-router.route('/detail/:productID').get(auth.verifyToken, ProductController.getProductByID);
+router.route('/detail/:productID').get(verifyToken, ProductController.getProductByID);
 
-router.route('/classify/:productID').get(auth.verifyToken, ProductController.getClassify);
+router.route('/classify/:productID').get(verifyToken, ProductController.getClassify);
 
-router.route('/wholesales/:productID').get(auth.verifyToken, ProductController.getWholesale);
+router.route('/wholesales/:productID').get(verifyToken, ProductController.getWholesale);
 
-router.route('/create-new-delivery').post(auth.verifyToken, auth.isAdmin, ProductController.createDelivery);
+router.route('/create-new-delivery').post(verifyToken, isAdmin, ProductController.createDelivery);
 
-router.route('/upload-video').post(auth.verifyToken, ProductController.handleFileUpload, ProductController.handleUploadVideo);
+router.route('/upload-video').post(verifyToken, ProductController.handleFileUpload, ProductController.handleUploadVideo);
 
-router.route('/upload-image').post(auth.verifyToken, ProductController.handleFileUpload, ProductController.handleUploadImage);
+router.route('/upload-image').post(verifyToken, ProductController.handleFileUpload, ProductController.handleUploadImage);
 
 router.route('/:userID/all-products').get(ProductController.getAllProductBySellerID);
 
-router.route('/wishlist').post(auth.verifyToken, ProductController.getWishList);
+router.route('/wishlist').post(verifyToken, ProductController.getWishList);
 
-router.route('/update-product/:productID').put(auth.verifyToken, auth.isSeller, ProductController.updateProduct);
+router.route('/update-product/:productID').put(verifyToken, isSeller, ProductController.updateProduct);
 
-router.route('/delete-product/:productID').delete(auth.verifyToken, auth.isSeller, ProductController.deleteProduct);
+router.route('/delete-product/:productID').delete(verifyToken, isSeller, ProductController.deleteProduct);
 
-router.route('/delete-category/:categoryId').delete(auth.verifyToken, auth.isAdmin, ProductController.deleteCategory);
+router.route('/delete-category/:categoryId').delete(verifyToken, isAdmin, ProductController.deleteCategory);
 
-router.route('/create-new-product').post(auth.verifyToken, auth.isSeller, ProductController.createNewProduct);
+router.route('/create-new-product').post(verifyToken, isSeller, ProductController.createNewProduct);
 
-router.route('/create-new-category').post(auth.verifyToken, auth.isAdmin, ProductController.createNewCategory);
+router.route('/create-new-category').post(verifyToken, isAdmin, ProductController.createNewCategory);
 
-router.route('/create-value-detail').post(auth.verifyToken, auth.isAdmin, ProductController.addValueDetail);
+router.route('/create-value-detail').post(verifyToken, isAdmin, ProductController.addValueDetail);
 
-router.route('/get-value-detail').post(auth.verifyToken, auth.isSeller, ProductController.getValueDetail);
+router.route('/get-value-detail').post(verifyToken, isSeller, ProductController.getValueDetail);
 
-router.route('/add-wishlist/:productId').post(auth.verifyToken, ProductController.addWishList);
+router.route('/add-wishlist/:productId').post(verifyToken, ProductController.addWishList);
 
-router.route('/review/:productId').post(auth.verifyToken, ProductController.reviewProduct);
+router.route('/review/:productId').post(verifyToken, ProductController.reviewProduct);
 
-router.route('/delete-image/:imagePath').delete(auth.verifyToken, auth.isSeller, ProductController.deleteImage);
+router.route('/delete-image/:imagePath').delete(verifyToken, isSeller, ProductController.deleteImage);
 
-router.route('/delete-video/:videoPath').delete(auth.verifyToken, auth.isSeller, ProductController.deleteVideo);
+router.route('/delete-video/:videoPath').delete(verifyToken, isSeller, ProductController.deleteVideo);
 
-module.exports = router;
+router.route('/search').get(verifyToken, ProductController.searchProduct);
+
+router.route('/recommendation').post(verifyToken, ProductController.recommendationProduct);
+
+export default router;

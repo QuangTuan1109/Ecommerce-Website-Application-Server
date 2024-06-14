@@ -1,5 +1,6 @@
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
+import mongoose from 'mongoose';
+
+const { Schema, model } = mongoose;
 
 const classifyDetailModel = new Schema({
     ProductID: {
@@ -11,11 +12,11 @@ const classifyDetailModel = new Schema({
         Value1: String,
         Option2: String,
         Value2: String,
-        Image: Array,
+        Image: [String],
         Price: Number,
         Stock: Number,
         SKU: String
     }]
-},  { timestamps: true });
+}, { timestamps: true });
 
-module.exports = mongoose.model('classifyDetailModel', classifyDetailModel);
+export default mongoose.model('ClassifyDetail', classifyDetailModel);

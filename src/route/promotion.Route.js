@@ -1,18 +1,20 @@
-const express = require('express');
-const router = require('express-promise-router')();
-const passport = require('passport');
-const mongoose = require('mongoose');
-const jwt = require('jsonwebtoken');
-const multer = require('multer');
+import express from 'express';
+import passport from 'passport';
+import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
+import multer from 'multer';
+
 const upload = multer({
     dest: 'uploads/'
 });
 
-require('../config/db/passport');
-const auth = require('../config/db/auth');
-const Promotion = require('../app/Controller/promotion.Controller');
-const userModel = require('../app/Model/user.Model');
-const roleModel = require('../app/Model/role.Model');
+import '../config/db/passport.js'; // Đảm bảo đường dẫn đúng và phần mở rộng `.js`
+import { verifyToken, isSeller } from '../config/db/auth.js'; // Đảm bảo đường dẫn đúng và phần mở rộng `.js`
+import Promotion from '../app/Controller/promotion.Controller.js'; // Đảm bảo đường dẫn đúng và phần mở rộng `.js`
+import userModel from '../app/Model/user.Model.js'; // Đảm bảo đường dẫn đúng và phần mở rộng `.js`
+import roleModel from '../app/Model/role.Model.js'; // Đảm bảo đường dẫn đúng và phần mở rộng `.js`
+
+const router = express.Router();
 
 const isAdminOrSeller = async (req, res, next) => {
     try {
@@ -59,23 +61,22 @@ const isAdminOrSeller = async (req, res, next) => {
     }
 };
 
-
-router.route('/add-voucher').post(auth.verifyToken, isAdminOrSeller, Promotion.createVoucher);
+router.route('/add-voucher').post(verifyToken, isAdminOrSeller, Promotion.createVoucher);
 
 router.route('/admin-voucher').get(Promotion.getAllAdminVouchers)
 
 router.route('/get-voucher-seller/:sellerId').get(Promotion.getVoucherBySeller)
 
-router.route('/seller-voucher').get(auth.verifyToken, auth.isSeller, Promotion.getAllSellerVouchers)
+router.route('/seller-voucher').get(verifyToken, isSeller, Promotion.getAllSellerVouchers)
 
-router.route('/folower-voucher').post(auth.verifyToken, Promotion.getAllSellerVouchersFollowedByCustomer);
+router.route('/folower-voucher').post(verifyToken, Promotion.getAllSellerVouchersFollowedByCustomer);
 
-router.route('/own-voucher').post(auth.verifyToken, Promotion.getCustomerVouchers);
+router.route('/own-voucher').post(verifyToken, Promotion.getCustomerVouchers);
 
-router.route('/:voucherID/update').patch(auth.verifyToken, isAdminOrSeller, Promotion.updateVoucher)
+router.route('/:voucherID/update').patch(verifyToken, isAdminOrSeller, Promotion.updateVoucher)
 
-router.route('/:voucherID/delete').delete(auth.verifyToken, isAdminOrSeller, Promotion.deleteVoucher)
+router.route('/:voucherID/delete').delete(verifyToken, isAdminOrSeller, Promotion.deleteVoucher)
 
-router.route('/:voucherID/use-voucher').post(auth.verifyToken, Promotion.handleVoucher)
+router.route('/:voucherID/use-voucher').post(verifyToken, Promotion.handleVoucher)
 
-module.exports = router;
+export default router;

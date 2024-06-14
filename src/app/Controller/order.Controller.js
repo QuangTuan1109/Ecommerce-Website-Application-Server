@@ -1,16 +1,13 @@
-const jwt = require('jsonwebtoken');
-const mongoose = require('mongoose')
+import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 
-
-const ClassifyDetail = require('../Model/classifyDetail.Model')
-const DeliveryMethod = require('../Model/Delivery.Model')
-const Product = require('../Model/products.Model')
-const Cart = require('../Model/cart.Model')
-const Order = require('../Model/order.Model')
-const Voucher = require('../Model/voucher.Model')
-const CustomerModel = require('../Model/customer.Model')
-const UserModel = require('../Model/user.Model')
-
+import ClassifyDetail from '../Model/classifyDetail.Model.js';
+import productModel from '../Model/products.Model.js';
+import Cart from '../Model/cart.Model.js';
+import Order from '../Model/order.Model.js';
+import Voucher from '../Model/voucher.Model.js';
+import Customer from '../Model/customer.Model.js';
+import User from '../Model/user.Model.js';
 
 async function addToCart(req, res) {
     try {
@@ -26,11 +23,11 @@ async function addToCart(req, res) {
 
         const userID = decodedToken.sub;
 
-        const foundUser = await UserModel.findById(userID)
+        const foundUser = await User.findById(userID)
         if (!foundUser) {
             res.status(404).json({ message: 'Not found user' })
         }
-        const foundCustomer = await CustomerModel.findOne({ _id: mongoose.Types.ObjectId(foundUser.CustomerID) })
+        const foundCustomer = await Customer.findOne({ _id: mongoose.Types.ObjectId(foundUser.CustomerID) })
         if (!foundCustomer) {
             res.status(404).json({ message: 'Not found customer' })
         }
@@ -109,11 +106,11 @@ async function getCart(req, res) {
         }
 
         const userID = decodedToken.sub;
-        const foundUser = await UserModel.findById(userID)
+        const foundUser = await User.findById(userID)
         if (!foundUser) {
             res.status(404).json({ message: 'Not found user' })
         }
-        const foundCustomer = await CustomerModel.findOne({ _id: mongoose.Types.ObjectId(foundUser.CustomerID) })
+        const foundCustomer = await Customer.findOne({ _id: mongoose.Types.ObjectId(foundUser.CustomerID) })
         if (!foundCustomer) {
             res.status(404).json({ message: 'Not found customer' })
         }
@@ -151,12 +148,12 @@ async function deleteProductInCart(req, res) {
         }
 
         const userID = decodedToken.sub;
-        const foundUser = await UserModel.findById(userID);
+        const foundUser = await User.findById(userID);
         if (!foundUser) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const foundCustomer = await CustomerModel.findOne({ _id: mongoose.Types.ObjectId(foundUser.CustomerID) });
+        const foundCustomer = await Customer.findOne({ _id: mongoose.Types.ObjectId(foundUser.CustomerID) });
         if (!foundCustomer) {
             return res.status(404).json({ message: 'Customer not found' });
         }
@@ -199,12 +196,12 @@ async function order(req, res) {
         }
 
         const userID = decodedToken.sub;
-        const foundUser = await UserModel.findById(userID);
+        const foundUser = await User.findById(userID);
         if (!foundUser) {
             return res.status(404).json({ message: 'Not found user' });
         }
 
-        const foundCustomer = await CustomerModel.findOne({ _id: mongoose.Types.ObjectId(foundUser.CustomerID) });
+        const foundCustomer = await Customer.findOne({ _id: mongoose.Types.ObjectId(foundUser.CustomerID) });
         if (!foundCustomer) {
             return res.status(404).json({ message: 'Not found customer' });
         }
@@ -241,7 +238,7 @@ async function order(req, res) {
                 return res.status(404).json({ message: 'Classify detail not found for the given product' });
             }
 
-            const checkDelivery = await Product.findOne({
+            const checkDelivery = await productModel.findOne({
                 _id: mongoose.Types.ObjectId(productItem.product),
                 'deliveryFee.name': productItem.deliveryMethod,
                 'deliveryFee.fee': productItem.deliveryFee
@@ -368,7 +365,7 @@ async function order(req, res) {
         }
 
         for (const update of productUpdates) {
-            await Product.updateOne(
+            await productModel.updateOne(
                 { _id: update.ProductID },
                 { $inc: { Quantity: -update.quantity } }
             );
@@ -394,12 +391,12 @@ async function getOrdersByCustomer(req, res) {
         }
 
         const userID = decodedToken.sub;
-        const foundUser = await UserModel.findById(userID);
+        const foundUser = await User.findById(userID);
         if (!foundUser) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const foundCustomer = await CustomerModel.findOne({ _id: mongoose.Types.ObjectId(foundUser.CustomerID) });
+        const foundCustomer = await Customer.findOne({ _id: mongoose.Types.ObjectId(foundUser.CustomerID) });
         if (!foundCustomer) {
             return res.status(404).json({ message: 'Customer not found' });
         }
@@ -424,10 +421,10 @@ async function getOrderBySeller(req, res) {
     try {
         const userId = req.params.sellerId;
 
-        const foundUser = await UserModel.findOne({ _id: userId });
+        const foundUser = await User.findOne({ _id: userId });
 
         if (foundUser) {
-            const products = await Product.find({ SellerID: mongoose.Types.ObjectId(foundUser.SellerID) }).select('_id');
+            const products = await productModel.find({ SellerID: mongoose.Types.ObjectId(foundUser.SellerID) }).select('_id');
 
             let productIds = products.map(product => product._id.toString().trim());
 
@@ -456,7 +453,7 @@ async function getOrderBySeller(req, res) {
 }
 
 async function updateVoucherAndStock(order) {
-    const customer = await CustomerModel.findById(order.customer);
+    const customer = await Customer.findById(order.customer);
 
     order.products.forEach(async (product) => {
         if (product.voucherShop && product.voucherShop.length > 0) {
@@ -499,7 +496,7 @@ async function updateVoucherAndStock(order) {
                 }
             }
         } else {
-            const productInStock = await Product.findById(product.product);
+            const productInStock = await productModel.findById(product.product);
             if (productInStock) {
                 productInStock.Quantity += product.quantity;
                 await productInStock.save();
@@ -512,7 +509,7 @@ async function cancelOrder(req, res) {
     try {
         const { orderId, userId } = req.body;
 
-        const user = await UserModel.findById(userId).populate('activeRole');
+        const user = await User.findById(userId).populate('activeRole');
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -612,7 +609,7 @@ async function ReturnOrder(req, res) {
             return res.status(400).json({ message: "Please provide valid order information" });
         }
 
-        const user = await UserModel.findById(userId).populate('activeRole');
+        const user = await User.findById(userId).populate('activeRole');
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -813,7 +810,8 @@ async function rejectReturn(req, res) {
     }
 }
 
-module.exports = {
+
+export default {
     addToCart,
     deleteProductInCart,
     getCart,

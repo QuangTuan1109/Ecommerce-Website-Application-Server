@@ -1,19 +1,17 @@
-const jwt = require('jsonwebtoken');
-const mongoose = require('mongoose')
-const { Storage } = require('@google-cloud/storage');
-const multer = require('multer');
+import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
+import { Storage } from '@google-cloud/storage';
+import multer from 'multer';
 
+import User from '../Model/user.Model.js';
+import productModel from '../Model/products.Model.js';
+import Voucher from '../Model/voucher.Model.js';
+import Seller from '../Model/seller.Model.js';
+import Role from '../Model/role.Model.js';
+import Admin from '../Model/admin.Model.js';
+import Customer from '../Model/customer.Model.js';
+import Images from '../Model/image.js';
 
-
-const User = require('../Model/user.Model')
-const Product = require('../Model/products.Model')
-const Voucher = require('../Model/voucher.Model')
-const sellerModel = require('../Model/seller.Model');
-const roleModel = require('../Model/role.Model');
-const Admin = require('../Model/admin.Model');
-const customerModel = require('../Model/customer.Model');
-const ImageModel = require('../Model/image')
-  
 const createVoucher = async (req, res) => {
     try {
         const token = req.headers.authorization;
@@ -29,13 +27,13 @@ const createVoucher = async (req, res) => {
         }
 
         let createdBy;
-        const role = await roleModel.findById(mongoose.Types.ObjectId(user.activeRole));
+        const role = await Role.findById(mongoose.Types.ObjectId(user.activeRole));
         if (!role) {
             return res.status(404).json({ message: 'Role not found' });
         }
 
         if (role.name === 'seller') {
-            const seller = await sellerModel.findById(mongoose.Types.ObjectId(user.SellerID));
+            const seller = await Seller.findById(mongoose.Types.ObjectId(user.SellerID));
             if (!seller) {
                 return res.status(404).json({ message: 'Seller not found' });
             }
@@ -49,7 +47,7 @@ const createVoucher = async (req, res) => {
         }
 
         if (req.body.productId) {
-            const sellerProducts = await Product.find({ SellerID: user.SellerID });
+            const sellerProducts = await productModel.find({ SellerID: user.SellerID });
             if (!sellerProducts || sellerProducts.length === 0) {
                 return res.status(404).json({ message: 'Products not found' });
             }
@@ -63,7 +61,7 @@ const createVoucher = async (req, res) => {
             }
         }
 
-        const imageUrl = await ImageModel.findOne({ name: req.body.typeCode });
+        const imageUrl = await Images.findOne({ name: req.body.typeCode });
         if (!imageUrl) {
             return res.status(404).json({ message: 'Image not found' });
         }
@@ -152,7 +150,7 @@ const getAllSellerVouchers = async (req, res) => {
 
         const userID = decodedToken.sub;
         const foundUser = await User.findById({ _id: mongoose.Types.ObjectId(userID) });
-        const roleSeller = await roleModel.findOne({ name: 'seller' });
+        const roleSeller = await Role.findOne({ name: 'seller' });
 
         if (!foundUser) {
             return res.status(404).json({ error: 'User not found' });
@@ -162,7 +160,7 @@ const getAllSellerVouchers = async (req, res) => {
             return res.status(403).json({ error: 'User is not a seller' });
         }
 
-        const foundSeller = await sellerModel.findById({ _id: foundUser.SellerID });
+        const foundSeller = await Seller.findById({ _id: foundUser.SellerID });
         if (!foundSeller) {
             return res.status(404).json({ error: 'Seller not found' });
         }
@@ -188,7 +186,7 @@ const getAllSellerVouchersFollowedByCustomer = async (req, res) => {
 
         const customerId = decodedToken.sub;
 
-        const customer = await customerModel.findById(mongoose.Types.ObjectId(customerId));
+        const customer = await Customer.findById(mongoose.Types.ObjectId(customerId));
         if (!customer) {
             return res.status(404).json({ message: 'Customer not found' });
         }
@@ -215,7 +213,7 @@ const getCustomerVouchers = async (req, res) => {
 
         const customerId = decodedToken.sub;
 
-        const customer = await customerModel.findById(mongoose.Types.ObjectId(customerId));
+        const customer = await Customer.findById(mongoose.Types.ObjectId(customerId));
         if (!customer) {
             return res.status(404).json({ message: 'Customer not found' });
         }
@@ -289,7 +287,7 @@ const handleVoucher = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const customer = await customerModel.findOne({ _id: user.CustomerID });
+        const customer = await Customer.findOne({ _id: user.CustomerID });
         if (!customer) {
             return res.status(404).json({ message: 'Forbidden: Only customers can use vouchers' });
         }
@@ -324,8 +322,7 @@ const handleVoucher = async (req, res) => {
     }
 };
 
-
-module.exports = {
+export default {
     createVoucher,
     getVoucherBySeller,
     getAllAdminVouchers,

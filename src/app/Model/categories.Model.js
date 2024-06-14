@@ -1,10 +1,11 @@
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
+import mongoose from 'mongoose';
+
+const { Schema, model } = mongoose;
 
 const categoriesModel = new Schema({
     ParentCategoryID: {
         type: Schema.Types.ObjectId,
-        ref: 'categoriesModel'
+        ref: 'Categories'
     },
     Name: {
         type: String,
@@ -12,4 +13,4 @@ const categoriesModel = new Schema({
     },
 }, { timestamps: true });
 
-module.exports = mongoose.model('Categories', categoriesModel);
+export default mongoose.model('Categories', categoriesModel);

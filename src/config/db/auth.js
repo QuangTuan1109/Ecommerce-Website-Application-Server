@@ -1,33 +1,32 @@
-const jwt = require('jsonwebtoken')
+import jwt from 'jsonwebtoken';
+import User from '../../app/Model/user.Model.js'; // Đảm bảo đường dẫn đúng và phần mở rộng `.js`
+import Role from '../../app/Model/role.Model.js'; // Đảm bảo đường dẫn đúng và phần mở rộng `.js`
+import { JWT_SECRET } from '../index.js'; // Đảm bảo đường dẫn đúng và phần mở rộng `.js`
 
-const User = require('../../app/Model/user.Model')
-const Roles = require('../../app/Model/role.Model')
-const { JWT_SECRET } = require('../index')
-
-verifyToken = (req, res, next) => {
+const verifyToken = (req, res, next) => {
     let token = req.header("Authorization");
 
     if (!token) {
-      return res.status(403).send({ message: "No token provided!" });
+        return res.status(403).send({ message: "No token provided!" });
     }
     jwt.verify(token, JWT_SECRET, (err, decoded) => {
         if (err) {
-          return res.status(401).send({ message: "Unauthorized!" });
+            return res.status(401).send({ message: "Unauthorized!" });
         }
         req.userId = decoded.sub;
         next();
-      });
-  };
+    });
+};
 
-isAdmin = (req, res, next) => {
+const isAdmin = (req, res, next) => {
     User.findById(req.userId).exec((err, user) => {
         if (err) {
             res.status(500).send({
                 message: err
-            })
-            return
+            });
+            return;
         }
-        Roles.find({
+        Role.find({
             _id: {
                 $in: user.Role[0]
             }
@@ -35,32 +34,31 @@ isAdmin = (req, res, next) => {
             if (err) {
                 res.status(500).send({
                     message: err
-                })
-                return
+                });
+                return;
             }
             if (roles[0].name === "admin"){
-                next()
-                return
+                next();
+                return;
             }
 
             res.status(403).send({
                 message: "Require admin role!!"
-            })
-            return
-        })
-    })
-}
+            });
+        });
+    });
+};
 
-isSeller = (req, res, next) => {
+const isSeller = (req, res, next) => {
     User.findById(req.userId).exec((err, user) => {
         if (err) {
             res.status(500).send({
                 message: err
-            })
-            return
+            });
+            return;
         }
 
-        Roles.find({
+        Role.find({
             _id: {
                 $in: user.Role[1]
             }
@@ -68,26 +66,19 @@ isSeller = (req, res, next) => {
             if (err) {
                 res.status(500).send({
                     message: err
-                })
-                return
+                });
+                return;
             }
             if (roles[0].name === "seller"){
-                next()
-                return
+                next();
+                return;
             }
 
             res.status(403).send({
                 message: "Require seller role!!"
-            })
-            return
-        })
-    })
-}
+            });
+        });
+    });
+};
 
-const auth = {
-    isAdmin,
-    isSeller,
-    verifyToken
-}
-
-module.exports = auth
+export { verifyToken, isAdmin, isSeller };

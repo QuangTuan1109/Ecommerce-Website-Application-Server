@@ -1,16 +1,25 @@
-const express = require('express');
-require('dotenv').config();
-const morgan = require('morgan');
-const userRoutes = require('./route/user.Route');
-const loginRoutes = require('./route/login.Route');
-const productRoutes = require('./route/product.Route');
-const orderRoutes = require('./route/order.Route');
-const promotionRoutes = require('./route/promotion.Route');
-const imageRoutes = require('./route/imageRoute')
-const cors = require('cors');
+import express from 'express';
+import dotenv from 'dotenv';
+import morgan from 'morgan';
+import userRoutes from './route/user.Route.js';
+import loginRoutes from './route/login.Route.js';
+import productRoutes from './route/product.Route.js';
+import orderRoutes from './route/order.Route.js';
+import promotionRoutes from './route/promotion.Route.js';
+import imageRoutes from './route/imageRoute.js';
+import analysisSalesRoute from './route/analysisSalesRoute.js';
+import cors from 'cors';
+import mongoose from 'mongoose';
+import { mongoURI } from './config/db/connect.js';
+
+dotenv.config();
 
 // Connect to MongoDB database
-require('./config/db/connect').mongoURI;
+mongoose.connect(mongoURI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+}).then(() => console.log("Database Connected!"))
+.catch(err => console.log("MongoDB Connection error: ", err));
 
 // Create Express app
 const app = express();
@@ -44,6 +53,7 @@ app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/order', orderRoutes);
 app.use('/api/v1/promotion', promotionRoutes);
 app.use('/api/v1/image', imageRoutes)
+app.use('/api/v1/analys', analysisSalesRoute)
 
 // Handle 404 errors
 app.use((req, res, next) => {

@@ -1,10 +1,7 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+
 mongoose.Promise = global.Promise;
 
-const db = {};
+const ROLES = ["admin", "customer", "seller"];
 
-db.mongoose = mongoose;
-
-db.ROLES = ["admin", "customer", "seller"];
-
-module.exports = db;
+export { mongoose, ROLES };

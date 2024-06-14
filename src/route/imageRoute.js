@@ -1,11 +1,11 @@
-const express = require('express');
-const router = require('express-promise-router')();
-const passport = require('passport');
+import express from 'express';
+import passport from 'passport';
+import imageController from '../app/Controller/imageController.js'; // Đảm bảo đường dẫn đúng và phần mở rộng `.js`
 
-require('../config/db/passport');
-const auth = require('../config/db/auth');
-const imageController = require('../app/Controller/imageController');
+const router = express.Router();
 
-router.route('/add-image').post( imageController.AddImage); 
+import '../config/db/passport.js'; // Đảm bảo đường dẫn đúng và phần mở rộng `.js`
 
-module.exports = router;
+router.route('/add-image').post(imageController.AddImage); 
+
+export default router;

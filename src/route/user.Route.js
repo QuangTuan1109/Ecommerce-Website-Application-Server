@@ -1,9 +1,10 @@
-const express = require('express')
+import express from 'express';
+import { verifyToken } from '../config/db/auth.js';
+
 const router = express.Router();
-const auth = require('../config/db/auth');
 
-const userController = require('../app/Controller/user.Controller');
+import getUserInfor from '../app/Controller/user.Controller.js';
 
-router.get('/', auth.verifyToken, userController.getUserInfor);
+router.get('/', verifyToken, getUserInfor);
 
-module.exports = router
+export default router;

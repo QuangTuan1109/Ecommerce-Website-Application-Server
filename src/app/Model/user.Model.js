@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
-const bcrypt = require('bcryptjs');
+import mongoose from 'mongoose';
+const { Schema } = mongoose;
+import bcrypt from 'bcryptjs';
 
 const userModelSchema = new Schema ({
     AdminID : {
@@ -67,4 +67,4 @@ userModelSchema.methods.isValidPassword = async function(newPassword) {
         throw new Error(error);
     }
 };
-module.exports = mongoose.model('User', userModelSchema);
+export default mongoose.model('User', userModelSchema);

@@ -1,9 +1,9 @@
-const { v4: uuidv4 } = require('uuid');
-const { Storage } = require('@google-cloud/storage');
-const multer = require('multer');
-const path = require('path');
+import { v4 as uuidv4 } from 'uuid';
+import { Storage } from '@google-cloud/storage';
+import multer from 'multer';
+import path from 'path';
 
-const ImageModel = require('../Model/image'); // Đảm bảo rằng bạn đã khai báo đúng model của bạn
+import Images from '../Model/image.js'; // Đảm bảo rằng bạn đã khai báo đúng model của bạn
 
 const storage = new Storage({
     projectId: 'ecommerce-website-a69f9',
@@ -45,7 +45,7 @@ const AddImage = async (req, res) => {
 
             uploadStream.on('finish', async () => {
                 const imageUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(imageUploadPath)}?alt=media`;
-                const newImage = new ImageModel({  // Đảm bảo rằng bạn đã thay đổi 'Voucher' thành 'ImageModel'
+                const newImage = new Images({ 
                     name: req.body.name,
                     image: imageUrl
                 });
@@ -65,6 +65,6 @@ const AddImage = async (req, res) => {
     }
 };
 
-module.exports = {
+export default {
     AddImage,
 };
