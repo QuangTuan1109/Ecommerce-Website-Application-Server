@@ -31,7 +31,7 @@ async function getEmbedding(text, productTexts) {
         sentences: productTexts
     };
 
-    const response = await fetch('https://api-inference.huggingface.co/models/sentence-transformers/bert-base-nli-mean-tokens', {
+    const response = await fetch('https://api-inference.huggingface.co/models/SeyedAli/Multilingual-Text-Semantic-Search-Siamese-BERT-V1', {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${process.env.HUGGING_FACE_TOKEN}`,
@@ -194,7 +194,9 @@ async function createNewProduct(req, res) {
             const minPrice = Math.min(...prices);
             const maxPrice = Math.max(...prices);
 
-            totalStock = Classify.reduce((accumulator, option) => accumulator + option.Stock, 0);
+            totalStock = Classify.reduce((accumulator, option) => {
+                return accumulator + option.Stock;
+            }, 0);
 
             if (minPrice === maxPrice) {
                 productPrice = `${minPrice.toLocaleString()}đ`;
@@ -203,7 +205,7 @@ async function createNewProduct(req, res) {
             }
         } else {
             productPrice = Price,
-                totalStock = Quantity
+            totalStock = Quantity
         }
 
         const newProduct = new productModel({
@@ -895,31 +897,40 @@ async function recommendationProduct(req, res) {
             .sort({ createdDate: -1 })
             .limit(5);
 
-        const orderProducts = orders.flatMap(order => {
+        let orderProducts = orders.flatMap(order => {
             return order.products.map(product => {
                 return product.product.Name;
             });
         });
 
-        const searchHistory = await searchHistoryModel.findOne({ customerId: foundCustomer._id })
+        let searchHistory = await searchHistoryModel.findOne({ customerId: foundCustomer._id })
             .select('keywords')
             .slice('keywords', -10);
 
-        const products = await productModel.find();
+        let products = await productModel.find();
 
-        const { input, output } = preprocessData(searchHistory, orderProducts, products);
+        if(orderProducts && searchHistory) {
+    
+            const { input, output } = preprocessData(searchHistory, orderProducts, products);
+    
+            const knn = await trainModel(input, output);
+    
+            const userInput = preprocessData(searchHistory, orderProducts, products).input;
+    
+            const recommendations = recommendProducts(knn, userInput);
+    
+            const uniqueRecommendations = Array.from(new Set(recommendations));
+    
+            const recommendedProducts = uniqueRecommendations.map(index => products[index]);
+            
+            res.json(recommendedProducts);
+        } else {
+            const shuffledProducts = products.sort(() => 0.5 - Math.random());
+            const recommendedProducts = shuffledProducts.slice(0, 10);
+        
+            res.json(recommendedProducts);
+        }
 
-        const knn = await trainModel(input, output);
-
-        const userInput = preprocessData(searchHistory, orderProducts, products).input;
-
-        const recommendations = recommendProducts(knn, userInput);
-
-        const uniqueRecommendations = Array.from(new Set(recommendations));
-
-        const recommendedProducts = uniqueRecommendations.map(index => products[index]);
-
-        res.json(recommendedProducts);
     } catch (error) {
         console.error('Error:', error);
         res.status(500).json({ message: 'Internal server error' });

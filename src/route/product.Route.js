@@ -56,8 +56,6 @@ router.route('/delete-image/:imagePath').delete(verifyToken, isSeller, ProductCo
 
 router.route('/delete-video/:videoPath').delete(verifyToken, isSeller, ProductController.deleteVideo);
 
-router.route('/search').get(verifyToken, ProductController.searchProduct);
-
 router.route('/recommendation').post(verifyToken, ProductController.recommendationProduct);
 
 export default router;

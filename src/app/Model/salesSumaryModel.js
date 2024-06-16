@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 
 const hourlyStatsSchema = new Schema({
     hour: {
-        type: Number, // Giờ từ 0 đến 23
+        type: Number,
         required: true
     },
     orders: {
@@ -39,7 +39,8 @@ const monthlyStatsSchema = new Schema({
     revenueThisMonth: {
         type: Number,
         default: 0
-    }
+    },
+    dailyStats: [dailyStatsSchema] 
 }, { _id: false });
 
 const salesSummarySchema = new Schema({
@@ -49,7 +50,6 @@ const salesSummarySchema = new Schema({
         required: true,
         unique: true
     },
-    dailyStats: [dailyStatsSchema],
     monthlyStats: [monthlyStatsSchema],
     updatedOrders: [{
         type: Schema.Types.ObjectId,
