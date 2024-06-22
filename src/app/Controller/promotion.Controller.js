@@ -191,7 +191,7 @@ const getAllSellerVouchersFollowedByCustomer = async (req, res) => {
             return res.status(404).json({ message: 'Customer not found' });
         }
 
-        const sellerIds = customer.Following; // Lấy danh sách ID của các Seller mà customer đã follow
+        const sellerIds = customer.Following;
         const sellerVouchers = await Voucher.find({ type: 'seller', createdBy: { $in: sellerIds } });
         res.status(200).json(sellerVouchers);
     } catch (error) {

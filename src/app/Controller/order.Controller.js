@@ -404,7 +404,8 @@ async function getOrdersByCustomer(req, res) {
         const orders = await Order.find({ customer: foundCustomer._id })
             .populate('products.product')
             .populate('products.voucherShop')
-            .populate('customer');
+            .populate('customer')
+            .sort({ createdDate: -1 });
 
         if (orders.length === 0) {
             return res.status(404).json({ message: 'No orders found with the specified status' });
@@ -616,14 +617,6 @@ async function ReturnOrder(req, res) {
 
         const role = user.activeRole ? user.activeRole.name : '';
 
-        const allReturnRefund = order.products.every(product => product.productStatus === 'Return/Refund');
-
-        if (allReturnRefund) {
-            order.orderStatus = 'Return/Refund';
-        } else {
-            order.orderStatus = 'Partial Return/Refund';
-        }
-
         orderRequest.products.forEach(productRequest => {
             if (productRequest.returnRequest) {
                 if (!productRequest.returnReason) {
@@ -641,6 +634,15 @@ async function ReturnOrder(req, res) {
                 }
             }
         });
+
+        const allReturnRefund = order.products.every(product => product.productStatus === 'Return/Refund');
+
+        if (allReturnRefund) {
+            order.orderStatus = 'Return/Refund';
+        } else {
+            order.orderStatus = 'Partial Return/Refund';
+        }
+
         order.updated = new Date();
 
         await order.save();
