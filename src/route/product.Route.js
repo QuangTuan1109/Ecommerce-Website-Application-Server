@@ -58,4 +58,6 @@ router.route('/delete-video/:videoPath').delete(verifyToken, isSeller, ProductCo
 
 router.route('/recommendation').post(verifyToken, ProductController.recommendationProduct);
 
+router.route('/create-fake-product').post(verifyToken, isSeller, ProductController.createFakeProduct);
+
 export default router;

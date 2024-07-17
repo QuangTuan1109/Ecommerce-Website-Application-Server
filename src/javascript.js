@@ -10,6 +10,7 @@ import orderRoutes from './route/order.Route.js';
 import promotionRoutes from './route/promotion.Route.js';
 import imageRoutes from './route/imageRoute.js';
 import analysisSalesRoute from './route/analysisSalesRoute.js';
+import paymentRoute from './route/paymentRoute.js'
 import cors from 'cors';
 import mongoose from 'mongoose';
 import { mongoURI } from './config/db/connect.js';
@@ -71,6 +72,7 @@ app.use('/api/v1/order', orderRoutes);
 app.use('/api/v1/promotion', promotionRoutes);
 app.use('/api/v1/image', imageRoutes);
 app.use('/api/v1/analys', analysisSalesRoute);
+app.use('/api/v1/payment', paymentRoute);
 
 const sessionClient = new SessionsClient({ keyFilename });
 

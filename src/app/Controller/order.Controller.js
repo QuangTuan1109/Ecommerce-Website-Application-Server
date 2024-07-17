@@ -33,7 +33,7 @@ async function addToCart(req, res) {
         }
 
         const classifyDetail = await ClassifyDetail.findOne({ ProductID: mongoose.Types.ObjectId(req.params.ProductID) });
-
+        
         let selectedOption;
         let price;
 
@@ -424,34 +424,37 @@ async function getOrderBySeller(req, res) {
 
         const foundUser = await User.findOne({ _id: userId });
 
-        if (foundUser) {
-            const products = await productModel.find({ SellerID: mongoose.Types.ObjectId(foundUser.SellerID) }).select('_id');
-
-            let productIds = products.map(product => product._id.toString().trim());
-
-            let orders = await Order.find({
-                'products.product': { $in: productIds.map(id => mongoose.Types.ObjectId(id)) }
-            }).populate('products.product').populate('products.voucherShop');
-
-            const ordersWithFilteredProducts = orders.map(order => {
-                order.products = order.products.filter(product => {
-                    return productIds.includes(product.product._id.toString().trim());
-                });
-                return order;
-            });
-
-            const pendingOrders = ordersWithFilteredProducts.filter(order => order.orderStatus === 'Pending');
-            const otherOrders = ordersWithFilteredProducts.filter(order => order.orderStatus !== 'Pending');
-
-            res.json([...pendingOrders.sort((a, b) => a.confirmationTime - b.confirmationTime), ...otherOrders]);
-        } else {
-            res.status(404).json({ message: 'User not found' });
+        if (!foundUser) {
+            return res.status(404).json({ message: 'User not found' });
         }
+
+        const products = await productModel.find({ SellerID: mongoose.Types.ObjectId(foundUser.SellerID) }).select('_id');
+
+        if (!products.length) {
+            return res.status(404).json({ message: 'No products found for this seller' });
+        }
+
+        const productIds = products.map(product => product._id.toString().trim());
+
+        const orders = await Order.find({
+            'products.product': { $in: productIds.map(id => mongoose.Types.ObjectId(id)) }
+        }).populate('products.product').populate('products.voucherShop');
+
+        const ordersWithFilteredProducts = orders.map(order => {
+            order.products = order.products.filter(product => productIds.includes(product.product._id.toString().trim()));
+            return order;
+        });
+
+        const pendingOrders = ordersWithFilteredProducts.filter(order => order.orderStatus === 'Pending');
+        const otherOrders = ordersWithFilteredProducts.filter(order => order.orderStatus !== 'Pending');
+
+        res.json([...pendingOrders.sort((a, b) => a.confirmationTime - b.confirmationTime), ...otherOrders]);
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Internal server error' });
     }
 }
+
 
 async function updateVoucherAndStock(order) {
     const customer = await Customer.findById(order.customer);

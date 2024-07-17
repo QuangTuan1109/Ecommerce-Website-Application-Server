@@ -7,6 +7,7 @@ import path from 'path';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import fetch from 'node-fetch';
+import { faker } from '@faker-js/faker';
 
 import User from '../Model/user.Model.js';
 import Role from '../Model/role.Model.js';
@@ -70,34 +71,21 @@ const handleFileUpload = (req, res, next) => {
     });
 };
 
-async function handleUploadVideo(req, res) {
-
-    const videoFiles = req.files['Video'];
-
-    const videoUrls = await Promise.all(videoFiles.map(async (videoFile) => {
-        const videoName = uuidv4() + path.extname(videoFile.originalname);
-        const videoFilePath = `videos/${videoName}`;
-        await bucket.upload(videoFile.path, { destination: videoFilePath });
-        return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(videoFilePath)}?alt=media`;
-    }));
-
-    return res.status(200).json({ data: videoUrls });
-
-}
-
-async function handleUploadImage(req, res) {
-    const imageFiles = req.files['Image'];
-
-    const imageUrls = await Promise.all(imageFiles.map(async (imageFile) => {
-        const imageName = uuidv4() + path.extname(imageFile.originalname);
-        const imagePath = `images/${imageName}`;
-        await bucket.upload(imageFile.path, { destination: imagePath });
-        return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(imagePath)}?alt=media`;
-    }));
-
-    return res.status(200).json({ data: imageUrls });
-
-}
+const uploadFileToFirebase = async (filePath, type) => {
+    const fileName = uuidv4() + path.extname(filePath);
+    const filePathInBucket = `${type}/${fileName}`;
+    await bucket.upload(filePath, { destination: filePathInBucket });
+    return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(filePathInBucket)}?alt=media`;
+  };
+  
+  const handleUploadVideo = async (filePath) => {
+    return await uploadFileToFirebase(filePath, 'videos');
+  };
+  
+  const handleUploadImage = async (filePath) => {
+    return await uploadFileToFirebase(filePath, 'images');
+  };
+  
 
 async function deleteFile(filePath) {
     try {
@@ -379,7 +367,8 @@ async function getAllProductBySellerID(req, res) {
         const foundUser = await User.findOne({ _id: req.params.userID })
 
         if (foundUser) {
-            const sellerProducts = await productModel.find({ SellerID: foundUser.SellerID });
+            const sellerProducts = await productModel.find({ SellerID: foundUser.SellerID })
+                .sort({ createdAt: -1 });;
             const products = [];
 
             for (var i = 0; i < sellerProducts.length; i++) {
@@ -851,7 +840,7 @@ async function searchProduct(req, res) {
 
         const products = await productModel.find();
 
-        const productTexts = products.map((product) => `${product.Name} ${product.Description}`);
+        const productTexts = products.map((product) => `${product.Name}`);
 
         const embeddings = await getEmbedding(query, productTexts);
 
@@ -862,7 +851,7 @@ async function searchProduct(req, res) {
 
         similarities.sort((a, b) => b.similarity - a.similarity);
 
-        const mostSimilarProducts = similarities.slice(0, 2).map(item => item.product);
+        const mostSimilarProducts = similarities.map(item => item.product);
 
         res.json(mostSimilarProducts);
     } catch (error) {
@@ -921,7 +910,7 @@ async function recommendationProduct(req, res) {
     
             const uniqueRecommendations = Array.from(new Set(recommendations));
     
-            const recommendedProducts = uniqueRecommendations.map(index => products[index]);
+            const recommendedProducts = uniqueRecommendations.slice(0, 10).map(index => products[index]);
             
             res.json(recommendedProducts);
         } else {
@@ -935,6 +924,218 @@ async function recommendationProduct(req, res) {
         console.error('Error:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
+}
+
+const categories = [
+    `Fashion > Men's Fashion > Shirt > Men's Shirt`
+  ];
+
+  const productName = [
+    "Elegant Blue Striped Button-Up Shirt with French Cuffs",
+    "Classic White Collared Dress Shirt with Pleated Front",
+    "Stylish Slim Fit Long Sleeve Shirt for Formal Occasions",
+    "Modern Black Oxford Shirt with Contrast Stitching Details",
+    "Casual Plaid Flannel Shirt for Weekend Adventures",
+    "Trendy Denim Chambray Shirt with Patch Pocket Design",
+    "Formal French Cuff Dress Shirt in Fine Cotton Blend",
+    "Vintage Linen Blend Button-Down with Retro Patterns",
+    "Designer Printed Silk Shirt with Artistic Flair",
+    "Athletic Performance Polo Shirt with Moisture-Wicking Technology",
+    "Urban Checkered Button-Up Shirt with Urban Appeal",
+    "Business Casual Mandarin Collar Shirt for Office Comfort",
+    "Coastal Hawaiian Print Shirt for Tropical Getaways",
+    "Bohemian Paisley Pattern Shirt with Boho Chic Vibes",
+    "Tropical Floral Short Sleeve Shirt for Summer Style",
+    "Eclectic Tie-Dye Button-Front Shirt with Funky Patterns",
+    "Retro Corduroy Overshirt for Vintage Lovers",
+    "Contemporary Mesh Overlay Shirt for Modern Looks",
+    "Sophisticated Pinstripe Dress Shirt with Formal Touch",
+    "Hipster Poplin Pocket Shirt with Urban Flair",
+    "Rugged Canvas Workwear Shirt for Outdoor Enthusiasts",
+    "Artisan Embroidered Linen Shirt with Handcrafted Details",
+    "Mountain Plaid Outdoor Shirt for Adventure Seekers",
+    "Heritage Twill Button-Up Shirt with Classic Appeal",
+    "Avant-Garde Asymmetric Hem Shirt with Unique Style",
+    "Minimalist Bamboo Fiber Shirt for Eco-Conscious Individuals",
+    "Utility Cargo Pocket Shirt for Practical Wear",
+    "Boho Batik Print Shirt with Cultural Influence",
+    "Futuristic Metallic Finish Shirt for Tech Enthusiasts",
+    "Romantic Lace Trim Blouse for Feminine Charm",
+    "Tech-Friendly Performance Shirt for Active Lifestyles",
+    "Sustainable Organic Cotton Shirt for Green Living",
+    "Edgy Faux Leather Shirt with Urban Edge",
+    "Cozy Fleece Lined Flannel Shirt for Cold Weather",
+    "Whimsical Sequin Embellished Shirt for Evening Glamour",
+    "Exotic Animal Print Shirt with Wild Personality",
+    "Elegant Satin Button-Down Blouse with Sophistication",
+    "Dapper Herringbone Dress Shirt for Classic Elegance",
+    "Hip Hop Graphic Tee Shirt for Street Style",
+    "Nomadic Linen Safari Shirt for Travelers",
+    "Aviator Pilot Style Shirt for Aviation Enthusiasts",
+    "Western Cowboy Plaid Shirt with Frontier Charm",
+    "Elegant Ruffled Tuxedo Shirt for Formal Events",
+    "Chic Silk Slip Shirt for Luxurious Comfort",
+    "Formal Tuxedo Front Shirt for Black Tie Affairs",
+    "Stylish Tie-Neck Blouse for Versatile Wear",
+    "Glamorous Sequin Mesh Shirt for Evening Glamour",
+    "Sporty Quarter Zip Pullover Shirt for Active Days",
+    "Couture Sequin Embroidered Shirt for High Fashion",
+    "Bohemian Crochet Lace Shirt with Artisanal Craftsmanship"
+  ];
+  
+
+  const imageUrls = [
+    'https://product.hstatic.net/1000096703/product/1_d4c95fe0dc8a47e28b0b3d3083498997_master.jpg',
+    'https://product.hstatic.net/1000378223/product/trang_5ab0b95197cb4cf68f797874c86acc8a.jpg',
+    'https://product.hstatic.net/1000378223/product/xanh_d1380fae61644bd4b422874f784c29a6.jpg',
+    'https://lh3.googleusercontent.com/c-xQDgA8fNBrts32FqqLrpXH0Rpp-2XdJfcWonU-GyoHv2AnjjxbNNLVxqNI_V4jnSq5o93BWp9Tm5o6NtXfwywdaZEodcRHCQ=rw',
+    'https://owen.cdn.vccloud.vn/media/catalog/product/cache/d52d7e242fac6dae82288d9a793c0676/a/r/ar220852dt._79.jpg',
+    'https://pos.nvncdn.com/492284-9176/ps/20230424_pA9t17NxsG.jpeg',
+    'https://pos.nvncdn.com/492284-9176/ps/20230424_4KdZg4VIkG.jpeg',
+    'https://tamanh.net/wp-content/uploads/2023/08/ao-so-mi-nam-tay-dai.jpg',
+    'https://tunhalam.com/cdn/shop/products/image_c37028bb-cfc8-466b-a106-d1ca8ad8a323.jpg?v=1676209470',
+    'https://pos.nvncdn.com/492284-9176/ps/20230510_yLZBW7ijI3.jpeg',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQWydC7RVz3nbF9y0PyI5MAgAwiv3HQxSq0YACxBN8CvWRXgq1dWzeCxe0yA2y8EL4w2I8&usqp=CAU',
+    'https://rustico.vn/wp-content/uploads/2023/11/NVK-86-scaled.jpg',
+    'https://rustico.vn/wp-content/uploads/2023/12/ao-so-mi-denim-Rustico-mau-den-2-scaled.jpg',
+    'https://rustico.vn/wp-content/uploads/2023/11/NVK-86-scaled.jpg',
+    'https://img.ws.mms.shopee.vn/dd542276f01f878a6fc68fc335a45142',
+    'https://namfashion.com/home/wp-content/uploads/2022/04/ao-so-mi-dai-tay-ke-caro-dep-ha-noi-gap-nhieu-mau-cao-cap-25.jpg',
+    'https://cdn0199.cdn4s.com/media/d61641d2eb8a32d46b9b.jpg',
+    'https://cdn0199.cdn4s.com/media/sm178%202.jpg',
+    'https://khohangsilami.vn/wp-content/uploads/2021/05/ao-so-mi-soc-cara-tay-dai-nam-mau-1.jpg',
+    'https://bumshop.com.vn/wp-content/uploads/2018/11/shop-ban-ao-so-mi-nam-dep-o-tphcm-mazzola.jpg',
+    'https://product.hstatic.net/1000344772/product/_s__2370_copy_e6e8d34d4f2849539c509baa259d1359_master.jpg',
+    'https://yeepvn.sgp1.digitaloceanspaces.com/2023/05/vn-11134201-23020-bo4ns00znnnv8b.jpg',
+    'https://cf.shopee.vn/file/d8f46ff9918876a5dc1eab29051c7b1f',
+    'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQfxEiUK3w1Ocooykmpjzb0ZBYVEzTanpiAzSNhyIY3XGYAEJTtB5_Ewde405GkjmwM5N4&usqp=CAU'
+  ];
+  
+  const videoUrl = 'https://youtu.be/Ah9zyWMPPQk';
+  
+  const createRandomProduct = async (sellerId) => {
+    try {
+      // Generate random image URLs
+      const randomImageUrls = faker.helpers.shuffle(imageUrls).slice(0, faker.number.int({ min: 5, max: 9 }));
+  
+      // Generate a random video URL
+      const randomVideoUrl = faker.helpers.arrayElement([videoUrl]);
+
+  
+      // Generate other random product data
+      const hasPrice = faker.datatype.boolean();
+      const hasPriceRange = faker.datatype.boolean();
+      let price = null;
+      let priceRange = null;
+  
+      if (hasPrice) {
+        price =  faker.number.int({ min: 200000, max: 700000 });
+      }
+  
+      if (!hasPrice) {
+        const priceMin = faker.number.int({ min: 200000, max: 400000 });
+        const priceMax = faker.number.int({ min: 200000, max: 700000 });
+        priceRange = `${priceMin.toLocaleString()}đ - ${priceMax.toLocaleString()}đ`;
+      }
+  
+      // Construct the product object
+      const productData = {
+        SellerID: sellerId,
+        Name: faker.helpers.arrayElement(productName),
+        Description: faker.lorem.paragraphs(10),
+        Image: randomImageUrls,
+        Video: randomVideoUrl,
+        Category: faker.helpers.arrayElement(categories),
+        Detail: {
+          brand: faker.company.name(),
+          organization: faker.company.name()
+        },
+        Price: price,
+        PriceRange: priceRange,
+        Quantity: faker.number.int({ min: 1, max: 100 }),
+        Rating: faker.number.int({ min: 0, max: 5, precision: 0.1 }),
+        Like: faker.number.int({ min: 0, max: 200 }),
+        Weight: faker.number.int({ min: 100, max: 500, precision: 0.1 }),
+        Height: faker.number.int({ min: 10, max: 30 }),
+        Width: faker.number.int({ min: 5, max: 20 }),
+        Length: faker.number.int({ min: 10, max: 30 }),
+        hazardousGoods: faker.helpers.arrayElement(['Yes', 'No']),
+        deliveryFee: [{
+          name: faker.helpers.arrayElement(['Bulky delivery', 'Fast delivery', 'Economical delivery', 'Express delivery']),
+          fee: faker.number.int({ min: 10000, max: 100000 })
+        }],
+        preOrderGoods: faker.helpers.arrayElement(['Yes', 'No']),
+        preparationTime: faker.number.int({ min: 1, max: 5 }),
+        Status: faker.helpers.arrayElement(['New', 'Old']),
+        SKU: faker.string.alphanumeric(10),
+        DiscountType: faker.helpers.arrayElement(['Fixed', 'Percentage']),
+        DiscountValue: faker.number.int({ min: 0, max: 50 }),
+        Quality: faker.helpers.arrayElement(['High', 'Medium', 'Low'])
+      };
+  
+      return productData;
+    } catch (error) {
+      console.error('Error creating fake product:', error);
+      throw error;
+    }
+  };
+  
+  const createRandomClassifyDetail = (productID) => ({
+    ProductID: productID,
+    Options: Array.from({ length: 3 }, () => ({
+      Option1: 'Color',
+      Value1: faker.color.human(),
+      Option2: 'Size',
+      Value2: faker.helpers.arrayElement(['S', 'M', 'L', 'XL']),
+      Image: faker.helpers.arrayElement(imageUrls),
+      Price:  faker.number.int({ min: 200000, max: 700000 }),
+      Stock: faker.number.int({ min: 1, max: 100 }),
+      SKU: faker.string.alphanumeric(10)
+    }))
+  });
+  
+
+async function createFakeProduct(req, res) {
+    try {
+        const token = req.headers.authorization;
+        if (!token) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+        if (!decodedToken) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const userID = decodedToken.sub;
+        const foundUser = await User.findById({ _id: mongoose.Types.ObjectId(userID) });
+        const roleSeller = await Role.findOne({ name: 'seller' });
+
+        if (!foundUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (!foundUser.activeRole.equals(roleSeller._id)) {
+            return res.status(403).json({ error: 'User is not a seller' });
+        }
+
+        const foundSeller = await Seller.findById({ _id: foundUser.SellerID });
+        if (!foundSeller) {
+            return res.status(404).json({ error: 'Seller not found' });
+        }
+        const productData = await createRandomProduct(foundSeller._id);
+        const newProduct = new productModel(productData);
+        await newProduct.save();
+    
+        const classifyDetailsData = createRandomClassifyDetail(newProduct._id);
+        const newClassifyDetail = new ClassifyDetail(classifyDetailsData);
+        await newClassifyDetail.save();
+    
+        res.status(200).json({ message: 'Fake product created successfully', product: newProduct });
+      } catch (error) {
+        console.error('Error creating fake product:', error);
+        res.status(500).json({ error: 'Error creating fake product' });
+      }
 }
 
 export default {
@@ -964,5 +1165,6 @@ export default {
     createDelivery,
     getClassify,
     getWholesale,
-    recommendationProduct
+    recommendationProduct,
+    createFakeProduct
 };
