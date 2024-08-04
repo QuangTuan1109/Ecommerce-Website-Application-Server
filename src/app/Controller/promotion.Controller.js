@@ -136,6 +136,26 @@ const getVoucherBySeller = async (req, res) => {
     }
 };
 
+const getVoucherById = async (req, res) => {
+    try {
+        const { voucherId } = req.params
+        const voucher = await Voucher.findById(voucherId);
+
+        if (!mongoose.Types.ObjectId.isValid(voucherId)) {
+            return res.status(400).json({ message: 'Invalid voucher ID.' });
+        }
+
+        if (!voucher || voucher.length === 0) {
+            return res.status(404).json({ message: 'No vouchers found for this seller.' });
+        }
+
+        res.status(200).json(voucher);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'An error occurred while fetching vouchers.' });
+    }
+};
+
 const getAllSellerVouchers = async (req, res) => {
     try {
         const token = req.headers.authorization;
@@ -251,9 +271,11 @@ const updateVoucher = async (req, res) => {
 
 const deleteVoucher = async (req, res) => {
     try {
-        const { voucherId } = req.params;
+        const voucherId = req.params.voucherID;
 
         const voucher = await Voucher.findById(voucherId);
+
+        console.log(voucherId)
         if (!voucher) {
             return res.status(404).json({ message: 'Voucher not found' });
         }
@@ -324,6 +346,7 @@ const handleVoucher = async (req, res) => {
 
 export default {
     createVoucher,
+    getVoucherById,
     getVoucherBySeller,
     getAllAdminVouchers,
     getAllSellerVouchers,

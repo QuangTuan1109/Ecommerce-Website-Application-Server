@@ -102,6 +102,11 @@ const orderSchema = new Schema({
         type: String,
         required: true
     },
+    paymentStatus: {
+        type: String,
+        enum: ['Paid', 'Unpaid'],
+        default: 'Unpaid'
+    },
     bankTransferImage: [
         {
             type: String

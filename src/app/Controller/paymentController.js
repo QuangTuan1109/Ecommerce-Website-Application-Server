@@ -1,19 +1,25 @@
 import crypto from 'crypto';
 import https from 'https';
 
+import Order from '../Model/order.Model.js';
+
 const MomoPayment = async (req, res, next) => {
     try {
+        const { amount, orderId } = req.body;
+        if (!amount || !orderId) {
+            return res.status(400).json({ error: 'Thông tin đơn hàng không đầy đủ' });
+        }
+
+
         var partnerCode = "MOMO";
         var accessKey = "F8BBA842ECF85";
         var secretkey = "K951B6PE1waDMi640xX08PD3vg6EkVlz";
         var requestId = partnerCode + new Date().getTime();
-        var orderId = requestId;
         var orderInfo = "pay with MoMo";
         var redirectUrl = "https://momo.vn/return";
         var ipnUrl = "https://callback.url/notify";
-        var amount = "50000";
-        var requestType = "captureWallet"
-        var extraData = ""; //pass empty value if your merchant does not have stores
+        var requestType = "payWithATM"
+        var extraData = "";
 
         // Create the raw signature string
         var rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
@@ -59,9 +65,21 @@ const MomoPayment = async (req, res, next) => {
                 data += chunk;
             });
 
-            paymentResponse.on('end', () => {
+            paymentResponse.on('end', async () => {
                 const responseBody = JSON.parse(data);
-                res.json(responseBody);
+                if (responseBody.resultCode === 0) {
+                    // Update the order status in the database
+                    try {
+                        await Order.findByIdAndUpdate(orderId, { paymentStatus: 'Paid' });
+                        res.json(responseBody);
+                    } catch (dbError) {
+                        console.error(`Database update error: ${dbError.message}`);
+                        res.status(500).json({ error: 'Cập nhật đơn hàng không thành công' });
+                    }
+                } else {
+                    console.log('a')
+                    res.status(400).json({ error: 'Thanh toán không thành công', details: responseBody });
+                }
             });
         });
 

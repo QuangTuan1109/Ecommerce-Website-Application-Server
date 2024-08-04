@@ -455,7 +455,6 @@ async function getOrderBySeller(req, res) {
     }
 }
 
-
 async function updateVoucherAndStock(order) {
     const customer = await Customer.findById(order.customer);
 

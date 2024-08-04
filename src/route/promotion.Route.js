@@ -67,15 +67,17 @@ router.route('/admin-voucher').get(Promotion.getAllAdminVouchers)
 
 router.route('/get-voucher-seller/:sellerId').get(Promotion.getVoucherBySeller)
 
+router.route('/get-voucher-detail/:voucherId').get(Promotion.getVoucherById)
+
 router.route('/seller-voucher').get(verifyToken, isSeller, Promotion.getAllSellerVouchers)
 
 router.route('/folower-voucher').post(verifyToken, Promotion.getAllSellerVouchersFollowedByCustomer);
 
 router.route('/own-voucher').post(verifyToken, Promotion.getCustomerVouchers);
 
-router.route('/:voucherID/update').patch(verifyToken, isAdminOrSeller, Promotion.updateVoucher)
+router.route('/:voucherID/update').patch(verifyToken, Promotion.updateVoucher)
 
-router.route('/:voucherID/delete').delete(verifyToken, isAdminOrSeller, Promotion.deleteVoucher)
+router.route('/:voucherID/delete').delete(verifyToken, Promotion.deleteVoucher)
 
 router.route('/:voucherID/use-voucher').post(verifyToken, Promotion.handleVoucher)
 

@@ -48,7 +48,6 @@ const storage = new Storage({
     projectId: 'ecommerce-website-a69f9',
     keyFilename: 'C:/Users/ADMIN/Downloads/ecommerce-website-a69f9-firebase-adminsdk-9jmgt-0b36ab9a6e.json'
 });
-
 const bucketName = 'ecommerce-website-a69f9.appspot.com';
 const bucket = storage.bucket(bucketName);
 const storageMulter = multer.diskStorage({
@@ -59,9 +58,7 @@ const storageMulter = multer.diskStorage({
         cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
     }
 });
-
 const upload = multer({ storage: storageMulter }).fields([{ name: 'Image', maxCount: 5 }, { name: 'Video', maxCount: 1 }]);
-
 const handleFileUpload = (req, res, next) => {
     upload(req, res, (err) => {
         if (err) {
@@ -70,22 +67,26 @@ const handleFileUpload = (req, res, next) => {
         next();
     });
 };
-
-const uploadFileToFirebase = async (filePath, type) => {
-    const fileName = uuidv4() + path.extname(filePath);
-    const filePathInBucket = `${type}/${fileName}`;
-    await bucket.upload(filePath, { destination: filePathInBucket });
-    return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(filePathInBucket)}?alt=media`;
-  };
-  
-  const handleUploadVideo = async (filePath) => {
-    return await uploadFileToFirebase(filePath, 'videos');
-  };
-  
-  const handleUploadImage = async (filePath) => {
-    return await uploadFileToFirebase(filePath, 'images');
-  };
-  
+async function handleUploadVideo(req, res) {
+    const videoFiles = req.files['Video'];
+    const videoUrls = await Promise.all(videoFiles.map(async (videoFile) => {
+        const videoName = uuidv4() + path.extname(videoFile.originalname);
+        const videoFilePath = `videos/${videoName}`;
+        await bucket.upload(videoFile.path, { destination: videoFilePath });
+        return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(videoFilePath)}?alt=media`;
+    }));
+    return res.status(200).json({ data: videoUrls });
+}
+async function handleUploadImage(req, res) {
+    const imageFiles = req.files['Image'];
+    const imageUrls = await Promise.all(imageFiles.map(async (imageFile) => {
+        const imageName = uuidv4() + path.extname(imageFile.originalname);
+        const imagePath = `images/${imageName}`;
+        await bucket.upload(imageFile.path, { destination: imagePath });
+        return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(imagePath)}?alt=media`;
+    }));
+    return res.status(200).json({ data: imageUrls });
+}
 
 async function deleteFile(filePath) {
     try {
@@ -193,7 +194,7 @@ async function createNewProduct(req, res) {
             }
         } else {
             productPrice = Price,
-            totalStock = Quantity
+                totalStock = Quantity
         }
 
         const newProduct = new productModel({
@@ -894,29 +895,29 @@ async function recommendationProduct(req, res) {
 
         let searchHistory = await searchHistoryModel.findOne({ customerId: foundCustomer._id })
             .select('keywords')
-            .slice('keywords', -10);
+            .slice('keywords', -1);
 
         let products = await productModel.find();
 
-        if(orderProducts && searchHistory) {
-    
+        if (orderProducts && searchHistory) {
+
             const { input, output } = preprocessData(searchHistory, orderProducts, products);
-    
+
             const knn = await trainModel(input, output);
-    
+
             const userInput = preprocessData(searchHistory, orderProducts, products).input;
-    
+
             const recommendations = recommendProducts(knn, userInput);
-    
+
             const uniqueRecommendations = Array.from(new Set(recommendations));
-    
+
             const recommendedProducts = uniqueRecommendations.slice(0, 10).map(index => products[index]);
-            
+
             res.json(recommendedProducts);
         } else {
             const shuffledProducts = products.sort(() => 0.5 - Math.random());
             const recommendedProducts = shuffledProducts.slice(0, 10);
-        
+
             res.json(recommendedProducts);
         }
 
@@ -928,9 +929,9 @@ async function recommendationProduct(req, res) {
 
 const categories = [
     `Fashion > Men's Fashion > Shirt > Men's Shirt`
-  ];
+];
 
-  const productName = [
+const productName = [
     "Elegant Blue Striped Button-Up Shirt with French Cuffs",
     "Classic White Collared Dress Shirt with Pleated Front",
     "Stylish Slim Fit Long Sleeve Shirt for Formal Occasions",
@@ -981,10 +982,10 @@ const categories = [
     "Sporty Quarter Zip Pullover Shirt for Active Days",
     "Couture Sequin Embroidered Shirt for High Fashion",
     "Bohemian Crochet Lace Shirt with Artisanal Craftsmanship"
-  ];
-  
+];
 
-  const imageUrls = [
+
+const imageUrls = [
     'https://product.hstatic.net/1000096703/product/1_d4c95fe0dc8a47e28b0b3d3083498997_master.jpg',
     'https://product.hstatic.net/1000378223/product/trang_5ab0b95197cb4cf68f797874c86acc8a.jpg',
     'https://product.hstatic.net/1000378223/product/xanh_d1380fae61644bd4b422874f784c29a6.jpg',
@@ -1009,91 +1010,91 @@ const categories = [
     'https://yeepvn.sgp1.digitaloceanspaces.com/2023/05/vn-11134201-23020-bo4ns00znnnv8b.jpg',
     'https://cf.shopee.vn/file/d8f46ff9918876a5dc1eab29051c7b1f',
     'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQfxEiUK3w1Ocooykmpjzb0ZBYVEzTanpiAzSNhyIY3XGYAEJTtB5_Ewde405GkjmwM5N4&usqp=CAU'
-  ];
-  
-  const videoUrl = 'https://youtu.be/Ah9zyWMPPQk';
-  
-  const createRandomProduct = async (sellerId) => {
-    try {
-      // Generate random image URLs
-      const randomImageUrls = faker.helpers.shuffle(imageUrls).slice(0, faker.number.int({ min: 5, max: 9 }));
-  
-      // Generate a random video URL
-      const randomVideoUrl = faker.helpers.arrayElement([videoUrl]);
+];
 
-  
-      // Generate other random product data
-      const hasPrice = faker.datatype.boolean();
-      const hasPriceRange = faker.datatype.boolean();
-      let price = null;
-      let priceRange = null;
-  
-      if (hasPrice) {
-        price =  faker.number.int({ min: 200000, max: 700000 });
-      }
-  
-      if (!hasPrice) {
-        const priceMin = faker.number.int({ min: 200000, max: 400000 });
-        const priceMax = faker.number.int({ min: 200000, max: 700000 });
-        priceRange = `${priceMin.toLocaleString()}đ - ${priceMax.toLocaleString()}đ`;
-      }
-  
-      // Construct the product object
-      const productData = {
-        SellerID: sellerId,
-        Name: faker.helpers.arrayElement(productName),
-        Description: faker.lorem.paragraphs(10),
-        Image: randomImageUrls,
-        Video: randomVideoUrl,
-        Category: faker.helpers.arrayElement(categories),
-        Detail: {
-          brand: faker.company.name(),
-          organization: faker.company.name()
-        },
-        Price: price,
-        PriceRange: priceRange,
-        Quantity: faker.number.int({ min: 1, max: 100 }),
-        Rating: faker.number.int({ min: 0, max: 5, precision: 0.1 }),
-        Like: faker.number.int({ min: 0, max: 200 }),
-        Weight: faker.number.int({ min: 100, max: 500, precision: 0.1 }),
-        Height: faker.number.int({ min: 10, max: 30 }),
-        Width: faker.number.int({ min: 5, max: 20 }),
-        Length: faker.number.int({ min: 10, max: 30 }),
-        hazardousGoods: faker.helpers.arrayElement(['Yes', 'No']),
-        deliveryFee: [{
-          name: faker.helpers.arrayElement(['Bulky delivery', 'Fast delivery', 'Economical delivery', 'Express delivery']),
-          fee: faker.number.int({ min: 10000, max: 100000 })
-        }],
-        preOrderGoods: faker.helpers.arrayElement(['Yes', 'No']),
-        preparationTime: faker.number.int({ min: 1, max: 5 }),
-        Status: faker.helpers.arrayElement(['New', 'Old']),
-        SKU: faker.string.alphanumeric(10),
-        DiscountType: faker.helpers.arrayElement(['Fixed', 'Percentage']),
-        DiscountValue: faker.number.int({ min: 0, max: 50 }),
-        Quality: faker.helpers.arrayElement(['High', 'Medium', 'Low'])
-      };
-  
-      return productData;
+const videoUrl = 'https://youtu.be/Ah9zyWMPPQk';
+
+const createRandomProduct = async (sellerId) => {
+    try {
+        // Generate random image URLs
+        const randomImageUrls = faker.helpers.shuffle(imageUrls).slice(0, faker.number.int({ min: 5, max: 9 }));
+
+        // Generate a random video URL
+        const randomVideoUrl = faker.helpers.arrayElement([videoUrl]);
+
+
+        // Generate other random product data
+        const hasPrice = faker.datatype.boolean();
+        const hasPriceRange = faker.datatype.boolean();
+        let price = null;
+        let priceRange = null;
+
+        if (hasPrice) {
+            price = faker.number.int({ min: 200000, max: 700000 });
+        }
+
+        if (!hasPrice) {
+            const priceMin = faker.number.int({ min: 200000, max: 400000 });
+            const priceMax = faker.number.int({ min: 200000, max: 700000 });
+            priceRange = `${priceMin.toLocaleString()}đ - ${priceMax.toLocaleString()}đ`;
+        }
+
+        // Construct the product object
+        const productData = {
+            SellerID: sellerId,
+            Name: faker.helpers.arrayElement(productName),
+            Description: faker.lorem.paragraphs(10),
+            Image: randomImageUrls,
+            Video: randomVideoUrl,
+            Category: faker.helpers.arrayElement(categories),
+            Detail: {
+                brand: faker.company.name(),
+                organization: faker.company.name()
+            },
+            Price: price,
+            PriceRange: priceRange,
+            Quantity: faker.number.int({ min: 1, max: 100 }),
+            Rating: faker.number.int({ min: 0, max: 5, precision: 0.1 }),
+            Like: faker.number.int({ min: 0, max: 200 }),
+            Weight: faker.number.int({ min: 100, max: 500, precision: 0.1 }),
+            Height: faker.number.int({ min: 10, max: 30 }),
+            Width: faker.number.int({ min: 5, max: 20 }),
+            Length: faker.number.int({ min: 10, max: 30 }),
+            hazardousGoods: faker.helpers.arrayElement(['Yes', 'No']),
+            deliveryFee: [{
+                name: faker.helpers.arrayElement(['Bulky delivery', 'Fast delivery', 'Economical delivery', 'Express delivery']),
+                fee: faker.number.int({ min: 10000, max: 100000 })
+            }],
+            preOrderGoods: faker.helpers.arrayElement(['Yes', 'No']),
+            preparationTime: faker.number.int({ min: 1, max: 5 }),
+            Status: faker.helpers.arrayElement(['New', 'Old']),
+            SKU: faker.string.alphanumeric(10),
+            DiscountType: faker.helpers.arrayElement(['Fixed', 'Percentage']),
+            DiscountValue: faker.number.int({ min: 0, max: 50 }),
+            Quality: faker.helpers.arrayElement(['High', 'Medium', 'Low'])
+        };
+
+        return productData;
     } catch (error) {
-      console.error('Error creating fake product:', error);
-      throw error;
+        console.error('Error creating fake product:', error);
+        throw error;
     }
-  };
-  
-  const createRandomClassifyDetail = (productID) => ({
+};
+
+const createRandomClassifyDetail = (productID) => ({
     ProductID: productID,
     Options: Array.from({ length: 3 }, () => ({
-      Option1: 'Color',
-      Value1: faker.color.human(),
-      Option2: 'Size',
-      Value2: faker.helpers.arrayElement(['S', 'M', 'L', 'XL']),
-      Image: faker.helpers.arrayElement(imageUrls),
-      Price:  faker.number.int({ min: 200000, max: 700000 }),
-      Stock: faker.number.int({ min: 1, max: 100 }),
-      SKU: faker.string.alphanumeric(10)
+        Option1: 'Color',
+        Value1: faker.color.human(),
+        Option2: 'Size',
+        Value2: faker.helpers.arrayElement(['S', 'M', 'L', 'XL']),
+        Image: faker.helpers.arrayElement(imageUrls),
+        Price: faker.number.int({ min: 200000, max: 700000 }),
+        Stock: faker.number.int({ min: 1, max: 100 }),
+        SKU: faker.string.alphanumeric(10)
     }))
-  });
-  
+});
+
 
 async function createFakeProduct(req, res) {
     try {
@@ -1126,16 +1127,16 @@ async function createFakeProduct(req, res) {
         const productData = await createRandomProduct(foundSeller._id);
         const newProduct = new productModel(productData);
         await newProduct.save();
-    
+
         const classifyDetailsData = createRandomClassifyDetail(newProduct._id);
         const newClassifyDetail = new ClassifyDetail(classifyDetailsData);
         await newClassifyDetail.save();
-    
+
         res.status(200).json({ message: 'Fake product created successfully', product: newProduct });
-      } catch (error) {
+    } catch (error) {
         console.error('Error creating fake product:', error);
         res.status(500).json({ error: 'Error creating fake product' });
-      }
+    }
 }
 
 export default {
